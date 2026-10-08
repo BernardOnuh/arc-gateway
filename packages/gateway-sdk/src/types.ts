@@ -116,3 +116,69 @@ export interface TokenInfo {
   decimals: number;
   isNative: boolean;
 }
+
+export interface PageParams {
+  limit?: number;
+  offset?: number;
+}
+
+export interface Page<T> {
+  items: T[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ListQuotesParams extends PageParams {
+  customerId?: string;
+}
+
+export interface QuoteListItem {
+  quoteId: string;
+  customerId: string | null;
+  originChainId: number;
+  destChainId: number;
+  tokenIn: string;
+  tokenOut: string;
+  recipient: string;
+  amountIn: string;
+  feeAmount: string;
+  feeBps: number;
+  netAmount: string;
+  estimatedOut: string | null;
+  minOut: string | null;
+  expiresAt: number;
+  createdAt: string;
+  intent: { intentId: string; status: IntentStatus } | null;
+}
+
+export interface ListIntentsParams extends PageParams {
+  status?: IntentStatus;
+  customerId?: string;
+}
+
+export interface IntentListItem {
+  id: string;
+  quoteId: string;
+  customerId: string | null;
+  originChainId: number;
+  destChainId: number;
+  amountIn: string;
+  feeAmount: string;
+  status: IntentStatus;
+  originTx: string | null;
+  destTx: string | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PartnerProfile {
+  partnerId: string;
+  name: string;
+  email: string | null;
+  feeBps: number;
+  rateLimitPerMin: number;
+  createdAt: string;
+  apiKey: { id: string; keyPrefix: string; createdAt: string };
+}

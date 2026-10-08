@@ -19,6 +19,11 @@ const envSchema = z.object({
   PARTNER_DEFAULT_FEE_BPS: z.coerce.number().int().min(1).max(100).default(10),
   /** Default per-minute rate limit for new self-serve partners. */
   PARTNER_DEFAULT_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(30),
+  /**
+   * Comma-separated browser origins allowed to call the API (dashboard, landing).
+   * "*" allows any origin; safe because auth is a bearer header, not cookies.
+   */
+  CORS_ORIGINS: z.string().default("http://localhost:5173"),
   LOG_LEVEL: z.string().default("info"),
 });
 
@@ -35,6 +40,9 @@ export const config = {
   arcSdkPrivateKey: env.ARC_SDK_PRIVATE_KEY,
   partnerDefaultFeeBps: env.PARTNER_DEFAULT_FEE_BPS,
   partnerDefaultRateLimitPerMin: env.PARTNER_DEFAULT_RATE_LIMIT_PER_MIN,
+  corsOrigins: env.CORS_ORIGINS.split(",")
+    .map((o) => o.trim())
+    .filter(Boolean),
   logLevel: env.LOG_LEVEL,
   isTest: process.env.NODE_ENV === "test",
 };

@@ -755,3 +755,266 @@ describe("partner onboarding, customers and ledger", () => {
     expect(res.json().error).toBe("api key is not linked to a partner");
   });
 });
+
+describe("dashboard list endpoints and CORS", () => {
+  let app: any;
+  let key: string;
+  let otherKey: string;
+  let legacyKey: string;
+  let partnerId: string;
+  let customerA: string;
+  let customerB: string;
+  let intentId: string;
+  const suffix = Date.now();
+  const auth = () => ({ authorization: `Bearer ${key}` });
+
+  async function makePartnerKey(name: string) {
+    const [p] = await db
+      .insert(partners)
+      .values({ name, email: `${name}-${suffix}@test.local`, feeBps: 10, rateLimitPerMin: 100 })
+      .returning({ id: partners.id });
+    const k = generateApiKey();
+    await db.insert(apiKeys).values({
+      partnerId: p.id,
+      partnerName: name,
+      keyPrefix: k.keyPrefix,
+      keyHash: k.keyHash,
+      feeBps: 10,
+      rateLimitPerMin: 100,
+      active: true,
+    });
+    return { partnerId: p.id, rawKey: k.rawKey };
+  }
+
+  const quote = (customerId?: string) =>
+    app.inject({
+      method: "POST",
+      url: "/v1/quotes",
+      headers: auth(),
+      body: {
+        originChainId: 1,
+        destChainId: 5042002,
+        tokenIn: "WETH",
+        tokenOut: "USDC",
+        amountIn: "1000000000000000000",
+        recipient: "0xrecipient",
+        slippageBps: 5,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        ...(customerId ? { customerId } : {}),
+      },
+    });
+
+  beforeAll(async () => {
+    app = await buildApp();
+    const main = await makePartnerKey("list-main");
+    key = main.rawKey;
+    partnerId = main.partnerId;
+    otherKey = (await makePartnerKey("list-other")).rawKey;
+
+    const legacy = generateApiKey();
+    await db.insert(apiKeys).values({
+      partnerName: "list-legacy",
+      keyPrefix: legacy.keyPrefix,
+      keyHash: legacy.keyHash,
+      feeBps: 10,
+      rateLimitPerMin: 100,
+      active: true,
+    });
+    legacyKey = legacy.rawKey;
+
+    for (const [ext, addr] of [
+      ["list_a", "0x00000000000000000000000000000000000000aa"],
+      ["list_b", "0x00000000000000000000000000000000000000bb"],
+    ]) {
+      const res = await app.inject({
+        method: "POST",
+        url: "/v1/customers",
+        headers: auth(),
+        body: { externalId: ext, recipientAddress: addr },
+      });
+      if (ext === "list_a") customerA = res.json().customerId;
+      else customerB = res.json().customerId;
+    }
+
+    // 3 quotes: two for A (one submitted), one unattributed
+    const q1 = (await quote(customerA)).json();
+    await quote(customerA);
+    await quote();
+    const sub = await app.inject({
+      method: "POST",
+      url: "/v1/intents/submit",
+      headers: auth(),
+      body: { quoteId: q1.quoteId, signedPayload: "0x" + "ab".repeat(64) },
+    });
+    intentId = sub.json().intentId;
+  });
+
+  afterAll(async () => {
+    if (app) await app.close();
+    for (const name of ["list-main", "list-other"]) {
+      await db.delete(partners).where(eq(partners.email, `${name}-${suffix}@test.local`));
+    }
+    await db.delete(apiKeys).where(eq(apiKeys.partnerName, "list-legacy"));
+  });
+
+  it("GET /v1/customers lists the partner's customers newest first", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/customers", headers: auth() });
+    expect(res.statusCode).toBe(200);
+    const data = res.json();
+    expect(data.total).toBe(2);
+    expect(data.limit).toBe(50);
+    expect(data.offset).toBe(0);
+    expect(data.items.map((c: any) => c.externalId)).toEqual(["list_b", "list_a"]);
+    expect(data.items[0]).toEqual({
+      customerId: customerB,
+      externalId: "list_b",
+      recipientAddress: "0x00000000000000000000000000000000000000bb",
+      createdAt: expect.any(String),
+    });
+  });
+
+  it("GET /v1/customers paginates and keeps the full total", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/customers?limit=1&offset=1", headers: auth() });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().total).toBe(2);
+    expect(res.json().items).toHaveLength(1);
+    expect(res.json().items[0].customerId).toBe(customerA);
+  });
+
+  it("GET /v1/customers does not leak another partner's customers", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/v1/customers",
+      headers: { authorization: `Bearer ${otherKey}` },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ total: 0, items: [] });
+  });
+
+  it("list endpoints reject bad paging and legacy keys", async () => {
+    const bad = await app.inject({ method: "GET", url: "/v1/customers?limit=500", headers: auth() });
+    expect(bad.statusCode).toBe(400);
+    const legacy = await app.inject({
+      method: "GET",
+      url: "/v1/customers",
+      headers: { authorization: `Bearer ${legacyKey}` },
+    });
+    expect(legacy.statusCode).toBe(400);
+    expect(legacy.json().error).toBe("api key is not linked to a partner");
+    const noAuth = await app.inject({ method: "GET", url: "/v1/quotes" });
+    expect(noAuth.statusCode).toBe(401);
+  });
+
+  it("GET /v1/quotes lists quotes with request fields, fee math and intent status", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/quotes", headers: auth() });
+    expect(res.statusCode).toBe(200);
+    const data = res.json();
+    expect(data.total).toBe(3);
+    const submitted = data.items.find((q: any) => q.intent !== null);
+    expect(submitted).toMatchObject({
+      customerId: customerA,
+      originChainId: 1,
+      destChainId: 5042002,
+      tokenIn: "WETH",
+      tokenOut: "USDC",
+      recipient: "0xrecipient",
+      amountIn: "1000000000000000000",
+      feeAmount: "1000000000000000",
+      feeBps: 10,
+      netAmount: "999000000000000000",
+      intent: { intentId, status: expect.any(String) },
+    });
+    expect(submitted.estimatedOut).toMatch(/^\d+$/);
+    expect(data.items.filter((q: any) => q.intent === null)).toHaveLength(2);
+    // newest first: the unattributed quote was created last
+    expect(data.items[0].customerId).toBeNull();
+  });
+
+  it("GET /v1/quotes filters by customerId", async () => {
+    const res = await app.inject({ method: "GET", url: `/v1/quotes?customerId=${customerA}`, headers: auth() });
+    expect(res.json().total).toBe(2);
+    expect(res.json().items.every((q: any) => q.customerId === customerA)).toBe(true);
+    const none = await app.inject({ method: "GET", url: `/v1/quotes?customerId=${customerB}`, headers: auth() });
+    expect(none.json()).toMatchObject({ total: 0, items: [] });
+  });
+
+  it("GET /v1/quotes is scoped to the calling key", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/v1/quotes",
+      headers: { authorization: `Bearer ${otherKey}` },
+    });
+    expect(res.json()).toMatchObject({ total: 0, items: [] });
+  });
+
+  it("GET /v1/intents lists intents with quote context", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/intents", headers: auth() });
+    expect(res.statusCode).toBe(200);
+    const data = res.json();
+    expect(data.total).toBe(1);
+    expect(data.items[0]).toMatchObject({
+      id: intentId,
+      customerId: customerA,
+      originChainId: 1,
+      destChainId: 5042002,
+      amountIn: "1000000000000000000",
+      feeAmount: "1000000000000000",
+    });
+  });
+
+  it("GET /v1/intents filters by status and customerId", async () => {
+    const all = (await app.inject({ method: "GET", url: "/v1/intents", headers: auth() })).json();
+    const status = all.items[0].status;
+    const match = await app.inject({ method: "GET", url: `/v1/intents?status=${status}`, headers: auth() });
+    expect(match.json().total).toBe(1);
+    const other = status === "FAILED" ? "PENDING" : "FAILED";
+    const miss = await app.inject({ method: "GET", url: `/v1/intents?status=${other}`, headers: auth() });
+    expect(miss.json().total).toBe(0);
+    const byB = await app.inject({ method: "GET", url: `/v1/intents?customerId=${customerB}`, headers: auth() });
+    expect(byB.json().total).toBe(0);
+    const bad = await app.inject({ method: "GET", url: "/v1/intents?status=NOPE", headers: auth() });
+    expect(bad.statusCode).toBe(400);
+  });
+
+  it("GET /v1/partners/me returns the partner profile for the key", async () => {
+    const res = await app.inject({ method: "GET", url: "/v1/partners/me", headers: auth() });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({
+      partnerId,
+      name: "list-main",
+      email: `list-main-${suffix}@test.local`,
+      feeBps: 10,
+      rateLimitPerMin: 100,
+      apiKey: { keyPrefix: "gw_live_" },
+    });
+    expect(JSON.stringify(res.json())).not.toContain(key);
+    const legacy = await app.inject({
+      method: "GET",
+      url: "/v1/partners/me",
+      headers: { authorization: `Bearer ${legacyKey}` },
+    });
+    expect(legacy.statusCode).toBe(400);
+  });
+
+  it("CORS allows the configured dashboard origin and rejects others", async () => {
+    const ok = await app.inject({
+      method: "OPTIONS",
+      url: "/v1/ledger",
+      headers: {
+        origin: "http://localhost:5173",
+        "access-control-request-method": "GET",
+        "access-control-request-headers": "authorization",
+      },
+    });
+    expect(ok.statusCode).toBe(204);
+    expect(ok.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
+    expect(String(ok.headers["access-control-allow-headers"])).toContain("authorization");
+
+    const evil = await app.inject({
+      method: "GET",
+      url: "/v1/chains",
+      headers: { origin: "https://evil.example" },
+    });
+    expect(evil.headers["access-control-allow-origin"]).toBeUndefined();
+  });
+});

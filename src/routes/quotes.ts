@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, count, type SQL } from "drizzle-orm";
 import { isSupportedChain } from "../chains.js";
 import { resolveToken } from "../tokens.js";
 import { requireApiKey } from "../auth/apiKey.js";
 import { db } from "../db/index.js";
-import { apiKeys, quotes, customers } from "../db/schema.js";
+import { apiKeys, quotes, customers, intents } from "../db/schema.js";
 import { computeFee } from "../fees.js";
 import type { UpstreamQuote } from "../providers/types.js";
 import { quoteProvider } from "../providers/index.js";
@@ -12,7 +12,10 @@ import { NoLiquidityError } from "../providers/arcSwap.js";
 import {
   quoteBodySchema,
   quoteResponseSchema,
+  quoteListQuerySchema,
+  quoteListResponseSchema,
   errorResponseSchema,
+  type QuoteBody,
   toJsonSchema,
 } from "../schemas.js";
 
@@ -164,6 +167,78 @@ export async function quoteRoutes(app: FastifyInstance) {
         minOut: upstreamQuote.minOut,
         expiresAt,
         unsignedTx: upstreamQuote.unsignedTx,
+      });
+    }
+  );
+
+  app.get(
+    "/v1/quotes",
+    {
+      onRequest: requireApiKey,
+      schema: {
+        tags: ["quotes"],
+        summary: "List quotes",
+        description:
+          "Lists quotes created with this API key, newest first, each with its submitted intent (if any). Filter with ?customerId=; paginate with ?limit=&offset=. Intent status is the last stored value; poll GET /v1/intents/:id for a live refresh.",
+        security: [{ bearerAuth: [] }],
+        querystring: toJsonSchema(quoteListQuerySchema),
+        response: {
+          200: toJsonSchema(quoteListResponseSchema),
+          400: toJsonSchema(errorResponseSchema),
+          401: toJsonSchema(errorResponseSchema),
+        },
+      },
+    },
+    async (request, reply) => {
+      const parsed = quoteListQuerySchema.safeParse(request.query);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: "invalid input" });
+      }
+      const { limit, offset, customerId } = parsed.data;
+      const key = request.apiKey!;
+
+      const filters: SQL[] = [eq(quotes.apiKeyId, key.id)];
+      if (customerId) filters.push(eq(quotes.customerId, customerId));
+      const where = and(...filters);
+
+      const [rows, [{ total }]] = await Promise.all([
+        db
+          .select({ quote: quotes, intentId: intents.id, intentStatus: intents.status })
+          .from(quotes)
+          .leftJoin(intents, eq(intents.quoteId, quotes.id))
+          .where(where)
+          .orderBy(desc(quotes.createdAt), desc(quotes.id))
+          .limit(limit)
+          .offset(offset),
+        db.select({ total: count() }).from(quotes).where(where),
+      ]);
+
+      return reply.send({
+        items: rows.map(({ quote, intentId, intentStatus }) => {
+          const req = quote.request as unknown as QuoteBody;
+          const res = quote.response as unknown as UpstreamQuote | null;
+          return {
+            quoteId: quote.id,
+            customerId: quote.customerId,
+            originChainId: req.originChainId,
+            destChainId: req.destChainId,
+            tokenIn: req.tokenIn,
+            tokenOut: req.tokenOut,
+            recipient: req.recipient,
+            amountIn: quote.amountIn,
+            feeAmount: quote.feeAmount,
+            feeBps: quote.feeBps,
+            netAmount: (BigInt(quote.amountIn) - BigInt(quote.feeAmount)).toString(),
+            estimatedOut: res?.estimatedOut ?? null,
+            minOut: res?.minOut ?? null,
+            expiresAt: Math.floor(quote.expiresAt.getTime() / 1000),
+            createdAt: quote.createdAt.toISOString(),
+            intent: intentId && intentStatus ? { intentId, status: intentStatus } : null,
+          };
+        }),
+        total,
+        limit,
+        offset,
       });
     }
   );

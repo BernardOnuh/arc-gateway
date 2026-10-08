@@ -186,6 +186,96 @@ export const intentResponseSchema = z.object({
   updatedAt: z.string(),
 });
 
+// ----- list endpoints (dashboard) -----
+
+export const paginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(50).describe("Page size (1-200, default 50)."),
+  offset: z.coerce.number().int().min(0).default(0).describe("Rows to skip (default 0)."),
+});
+
+const page = <T extends z.ZodType>(item: T) =>
+  z.object({
+    items: z.array(item),
+    total: z.number().int().describe("Total rows matching the filters, ignoring limit/offset."),
+    limit: z.number().int(),
+    offset: z.number().int(),
+  });
+
+export const customerListQuerySchema = paginationQuerySchema;
+export const customerListResponseSchema = page(customerResponseSchema);
+
+export const intentStatusValues = [
+  "PENDING",
+  "ORIGIN_CONFIRMED",
+  "FILLED",
+  "EXECUTED_ON_ARC",
+  "REFUNDED",
+  "FAILED",
+] as const;
+
+export const quoteListQuerySchema = paginationQuerySchema.extend({
+  customerId: z.string().uuid().optional().describe("Only quotes attributed to this customer."),
+});
+
+export const quoteListItemSchema = z.object({
+  quoteId: z.string(),
+  customerId: z.string().nullable(),
+  originChainId: z.number().int(),
+  destChainId: z.number().int(),
+  tokenIn: z.string().describe("tokenIn as sent on POST /v1/quotes (symbol or address)."),
+  tokenOut: z.string().describe("tokenOut as sent on POST /v1/quotes (symbol or address)."),
+  recipient: z.string(),
+  amountIn: z.string(),
+  feeAmount: z.string(),
+  feeBps: z.number().int(),
+  netAmount: z.string(),
+  estimatedOut: z.string().nullable(),
+  minOut: z.string().nullable(),
+  expiresAt: z.number().int(),
+  createdAt: z.string(),
+  intent: z
+    .object({ intentId: z.string(), status: z.enum(intentStatusValues) })
+    .nullable()
+    .describe("Intent submitted for this quote, or null if never submitted."),
+});
+export const quoteListResponseSchema = page(quoteListItemSchema);
+
+export const intentListQuerySchema = paginationQuerySchema.extend({
+  status: z.enum(intentStatusValues).optional().describe("Only intents in this status."),
+  customerId: z.string().uuid().optional().describe("Only intents whose quote is attributed to this customer."),
+});
+
+export const intentListItemSchema = z.object({
+  id: z.string(),
+  quoteId: z.string(),
+  customerId: z.string().nullable(),
+  originChainId: z.number().int(),
+  destChainId: z.number().int(),
+  amountIn: z.string(),
+  feeAmount: z.string(),
+  status: z.enum(intentStatusValues),
+  originTx: z.string().nullable(),
+  destTx: z.string().nullable(),
+  error: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export const intentListResponseSchema = page(intentListItemSchema);
+
+export const partnerProfileResponseSchema = z.object({
+  partnerId: z.string(),
+  name: z.string(),
+  email: z.string().nullable(),
+  feeBps: z.number().int().describe("Fee charged on quotes made with this key, in basis points."),
+  rateLimitPerMin: z.number().int().describe("Authenticated requests allowed per minute for this key."),
+  createdAt: z.string(),
+  apiKey: z.object({
+    id: z.string(),
+    keyPrefix: z.string(),
+    createdAt: z.string(),
+  }),
+});
+
 export type QuoteBody = z.infer<typeof quoteBodySchema>;
 export type SubmitBody = z.infer<typeof submitBodySchema>;
 

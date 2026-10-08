@@ -2,6 +2,27 @@
 
 Authoritative plan for building the customer-facing and partner-facing frontend layer on top of the live `arc-gateway` API. This document is the handoff for an implementation agent. Read `src/server.ts`, `packages/gateway-sdk/`, and `reports/ENDPOINT_TEST_REPORT.md` for the current state before starting.
 
+## 0. Decisions & progress (2026-10-08) — overrides the sections below where they conflict
+
+**Decisions**
+- **Widget auth = publishable keys** (`pk_live_…`, scoped to chains/tokens/quotes/intents + per-key origin allowlist). The secret `gw_live_` key must never ship to a browser the partner doesn't control.
+- **One frontend app, `apps/web`**: marketing routes (`/`, `/how-it-works`, `/developers`, `/pricing`, `/signup`) + authenticated dashboard under `/app/*`. Signup hands the new key to the dashboard in memory (no key in URLs). Replaces separate `apps/landing` / `apps/dashboard`.
+- Key-management routes become `/v1/partners/me/api-keys/...` (no `:id`; the key already identifies the partner).
+- `packages/api-client` deferred: generate OpenAPI types into `@arc/gateway-sdk` instead of a second client.
+- Quote/intent/ledger reads are scoped **per API key** today. When key rotation lands, move all of them to partner scope together.
+
+**Order of work** (each step ends with green build/tests + a commit on `feat/b2b-frontend`)
+
+| Step | Work | Status |
+|---|---|---|
+| 0 | Baseline commit; split `server.ts` into `src/routes/*` | ✅ done |
+| 1 | Backend unblockers: CORS, `GET /v1/customers`, `GET /v1/partners/me`, `GET /v1/quotes`, `GET /v1/intents` (+ SDK methods) | ✅ done |
+| 2 | Scaffold `apps/web` (React 18 + Vite + Tailwind 3 + react-query) | next |
+| 3 | Marketing pages + `/signup` with one-time key reveal | |
+| 4 | Dashboard: login, overview, customers, ledger + CSV, transactions, settings | |
+| 5 | Publishable keys, key rotate/revoke, `ArcSwapWidget` (React + web component) | |
+| 6 | Customer accounts: password (scrypt) + sessions + payout wallet; payout execution deferred | |
+
 ---
 
 ## 1. Context & positioning
@@ -115,11 +136,12 @@ New tables:
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| `GET` | `/v1/quotes` | partner key | List quotes for a key: `?customerId=&status=&limit=&offset=` |
-| `GET` | `/v1/intents` | partner key | List intents for a key: `?status=&limit=&offset=` |
-| `GET` | `/v1/partners/me` | partner key | Partner profile (feeBps, rateLimit, createdAt) for `/settings` |
-| `POST` | `/v1/partners/:id/api-keys/rotate` | partner key | Rotate a business key (returns new key once; revokes old) |
-| `POST` | `/v1/partners/:id/api-keys/revoke` | partner key | Revoke a key |
+| `GET` | `/v1/customers` | partner key | ✅ built — list customers: `?limit=&offset=` |
+| `GET` | `/v1/quotes` | partner key | ✅ built — list quotes for a key: `?customerId=&limit=&offset=` |
+| `GET` | `/v1/intents` | partner key | ✅ built — list intents for a key: `?status=&customerId=&limit=&offset=` |
+| `GET` | `/v1/partners/me` | partner key | ✅ built — partner profile for `/settings` |
+| `POST` | `/v1/partners/me/api-keys/rotate` | partner key | Rotate a business key (returns new key once; revokes old) |
+| `POST` | `/v1/partners/me/api-keys/revoke` | partner key | Revoke a key |
 | `POST` | `/v1/customers/:id/password` | customer session | Set/change customer password |
 | `POST` | `/v1/customers/:id/wallet` | customer session | Set payout wallet + chain |
 
@@ -173,7 +195,7 @@ New tables:
 
 ## 7. Ground truth to verify against (live today)
 
-`curl http://localhost:3000/` lists 18 endpoints. Key invariants the frontend must respect:
+`curl http://localhost:3000/` lists 22 endpoints. Key invariants the frontend must respect:
 
 - A quote response is `amountIn` (full), `feeAmount`, `feeBps`, `netAmount`, `estimatedOut`, `minOut`, `expiresAt`, `unsignedTx` (nullable). Fee = `amountIn * feeBps / 10000`.
 - `POST /v1/quotes` rejects: bad token/chain (400), same origin/dest (400), amount ≤ 0 (400), past deadline (400), `customerId` not owned by the key's partner (400).
@@ -191,7 +213,7 @@ New tables:
 - [ ] Dashboard login validates the API key; `/`, `/customers`, `/ledger` render real data from the gateway; `/transactions` exists once list endpoints land
 - [ ] Widget submits a quote and continuously surfaces status through terminal state, emitting typed events
 - [ ] Customer password set/change + payout-wallet endpoints implemented with secure hashing/sessions; frontend flow exists; payout execution explicitly deferred
-- [ ] Swagger `/docs` and `reports/ENDPOINT_TEST_REPORT.md` updated for every backend addition (35/35 baseline exists)
+- [ ] Swagger `/docs` and `reports/ENDPOINT_TEST_REPORT.md` updated for every backend addition (42/42 baseline after step 1)
 - [ ] No secrets in any frontend bundle; only `VITE_GATEWAY_URL` envs
 
 ---
@@ -330,14 +352,26 @@ Response `200`:
 - `byCustomer` includes an unattributed bucket (`customerId: null`) for quotes made without `customerId`.
 Errors: `400` `api key is not linked to a partner` (legacy key) or `customer not found for this partner` (foreign filter); `401`.
 
-### Planned additions (per §4.2 — not built yet; dashboard/agent screens depend on them)
+### Dashboard read endpoints (partner key required) — built in step 1
+
+All lists return `{ "items": [...], "total": n, "limit": 50, "offset": 0 }`, newest first. `limit` 1–200 (default 50), `offset` ≥ 0; out-of-range → `400`. Lists return stored state and never poll upstream — use `GET /v1/intents/:id` to refresh one intent.
+
+| Method | Path | Query | Item shape |
+|---|---|---|---|
+| `GET` | `/v1/customers` | `limit, offset` | `{customerId, externalId, recipientAddress, createdAt}` — partner-scoped; legacy key → `400` |
+| `GET` | `/v1/quotes` | `customerId, limit, offset` | `{quoteId, customerId, originChainId, destChainId, tokenIn, tokenOut, recipient, amountIn, feeAmount, feeBps, netAmount, estimatedOut, minOut, expiresAt, createdAt, intent: {intentId, status} \| null}` — key-scoped |
+| `GET` | `/v1/intents` | `status, customerId, limit, offset` | `{id, quoteId, customerId, originChainId, destChainId, amountIn, feeAmount, status, originTx, destTx, error, createdAt, updatedAt}` — key-scoped |
+| `GET` | `/v1/partners/me` | — | `{partnerId, name, email, feeBps, rateLimitPerMin, createdAt, apiKey: {id, keyPrefix, createdAt}}`; legacy key → `400` |
+
+SDK: `client.listCustomers()`, `client.listQuotes()`, `client.listIntents()`, `client.me()`.
+
+**CORS:** browser origins allowed via `CORS_ORIGINS` (comma-separated, default `http://localhost:5173`, `*` = any). Methods `GET, POST`; headers `authorization, content-type`.
+
+### Planned additions (not built yet)
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| `GET` | `/v1/quotes` | partner key | List quotes: `?customerId=&limit=&offset=` |
-| `GET` | `/v1/intents` | partner key | List intents: `?status=&limit=&offset=` |
-| `GET` | `/v1/partners/me` | partner key | Partner profile (feeBps, rateLimit, createdAt) |
-| `POST` | `/v1/partners/:id/api-keys/rotate` | partner key | Rotate business key (new key returned once) |
-| `POST` | `/v1/partners/:id/api-keys/revoke` | partner key | Revoke a key |
+| `POST` | `/v1/partners/me/api-keys/rotate` | partner key | Rotate business key (new key returned once) |
+| `POST` | `/v1/partners/me/api-keys/revoke` | partner key | Revoke a key |
 | `POST` | `/v1/customers/:id/password` | customer session | Set/change customer password |
 | `POST` | `/v1/customers/:id/wallet` | customer session | Set payout wallet + chain |

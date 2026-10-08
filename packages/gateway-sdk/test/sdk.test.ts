@@ -99,4 +99,27 @@ describe("GatewayClient", () => {
     });
     await expect(client.submitAndPoll({ quoteId: "q1", signedPayload: "0xab" }, { pollIntervalMs: 1, timeoutMs: 20 })).rejects.toBeInstanceOf(GatewayError);
   });
+
+  it("list endpoints send paging and filters as query params", async () => {
+    const { client, calls } = makeClient(ok({ items: [], total: 0, limit: 10, offset: 20 }));
+    await client.listCustomers({ limit: 10, offset: 20 });
+    await client.listQuotes({ customerId: "c1" });
+    await client.listIntents({ status: "FAILED", limit: 5 });
+    await client.listIntents();
+    expect(calls.map((c) => c.url)).toEqual([
+      "http://gw.test/v1/customers?limit=10&offset=20",
+      "http://gw.test/v1/quotes?customerId=c1",
+      "http://gw.test/v1/intents?status=FAILED&limit=5",
+      "http://gw.test/v1/intents",
+    ]);
+    expect(calls.every((c) => c.init.method === "GET" && c.init.headers["authorization"] === "Bearer gw_live_testkey")).toBe(true);
+  });
+
+  it("me fetches the partner profile with auth", async () => {
+    const { client, calls } = makeClient(ok({ partnerId: "p1", name: "Acme", email: null, feeBps: 10, rateLimitPerMin: 30, createdAt: "t", apiKey: { id: "k1", keyPrefix: "gw_live_", createdAt: "t" } }));
+    const me = await client.me();
+    expect(me.feeBps).toBe(10);
+    expect(calls[0].url).toBe("http://gw.test/v1/partners/me");
+    expect(calls[0].init.headers["authorization"]).toBe("Bearer gw_live_testkey");
+  });
 });

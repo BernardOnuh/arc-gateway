@@ -4,8 +4,15 @@ import type {
   CreateCustomerParams,
   Customer,
   Intent,
+  IntentListItem,
   Ledger,
+  ListIntentsParams,
+  ListQuotesParams,
+  Page,
+  PageParams,
+  PartnerProfile,
   Quote,
+  QuoteListItem,
   QuoteParams,
   RegisterPartnerParams,
   RegisterPartnerResult,
@@ -90,8 +97,24 @@ export class GatewayClient {
     return this.request("POST", "/v1/partners", { body: params, skipAuth: true });
   }
 
+  me(apiKey?: string): Promise<PartnerProfile> {
+    return this.request("GET", "/v1/partners/me", { apiKey });
+  }
+
   createCustomer(params: CreateCustomerParams, apiKey?: string): Promise<Customer> {
     return this.request("POST", "/v1/customers", { body: params, apiKey });
+  }
+
+  listCustomers(params: PageParams = {}, apiKey?: string): Promise<Page<Customer>> {
+    return this.request("GET", "/v1/customers", { query: { ...params }, apiKey });
+  }
+
+  listQuotes(params: ListQuotesParams = {}, apiKey?: string): Promise<Page<QuoteListItem>> {
+    return this.request("GET", "/v1/quotes", { query: { ...params }, apiKey });
+  }
+
+  listIntents(params: ListIntentsParams = {}, apiKey?: string): Promise<Page<IntentListItem>> {
+    return this.request("GET", "/v1/intents", { query: { ...params }, apiKey });
   }
 
   quote(params: QuoteParams, apiKey?: string): Promise<Quote> {

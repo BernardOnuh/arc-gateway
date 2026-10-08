@@ -1,5 +1,6 @@
 import Fastify, { type RouteOptions } from "fastify";
 import { Redis } from "ioredis";
+import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
@@ -72,6 +73,13 @@ export async function buildApp() {
     },
   });
   await app.register(swaggerUi, { routePrefix: "/docs" });
+
+  await app.register(cors, {
+    origin: config.corsOrigins.includes("*") ? true : config.corsOrigins,
+    methods: ["GET", "POST"],
+    allowedHeaders: ["authorization", "content-type"],
+    maxAge: 600,
+  });
 
   await app.register(rateLimit, globalRateLimitOptions(redis));
 

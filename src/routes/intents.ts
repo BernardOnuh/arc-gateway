@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, count, type SQL } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { requireApiKey } from "../auth/apiKey.js";
 import { db } from "../db/index.js";
@@ -11,7 +11,10 @@ import {
   submitResponseSchema,
   intentIdParamsSchema,
   intentResponseSchema,
+  intentListQuerySchema,
+  intentListResponseSchema,
   errorResponseSchema,
+  type QuoteBody,
   toJsonSchema,
 } from "../schemas.js";
 
@@ -186,6 +189,79 @@ export async function intentRoutes(app: FastifyInstance) {
         error: row.error,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
+      });
+    }
+  );
+
+  app.get(
+    "/v1/intents",
+    {
+      onRequest: requireApiKey,
+      schema: {
+        tags: ["intents"],
+        summary: "List intents",
+        description:
+          "Lists intents submitted with this API key, newest first. Filter with ?status= and ?customerId=; paginate with ?limit=&offset=. Returns the last stored status without polling upstream; use GET /v1/intents/:id to refresh a single intent.",
+        security: [{ bearerAuth: [] }],
+        querystring: toJsonSchema(intentListQuerySchema),
+        response: {
+          200: toJsonSchema(intentListResponseSchema),
+          400: toJsonSchema(errorResponseSchema),
+          401: toJsonSchema(errorResponseSchema),
+        },
+      },
+    },
+    async (request, reply) => {
+      const parsed = intentListQuerySchema.safeParse(request.query);
+      if (!parsed.success) {
+        return reply.code(400).send({ error: "invalid input" });
+      }
+      const { limit, offset, status, customerId } = parsed.data;
+      const key = request.apiKey!;
+
+      const filters: SQL[] = [eq(intents.apiKeyId, key.id)];
+      if (status) filters.push(eq(intents.status, status));
+      if (customerId) filters.push(eq(quotes.customerId, customerId));
+      const where = and(...filters);
+
+      const [rows, [{ total }]] = await Promise.all([
+        db
+          .select({ intent: intents, quote: quotes })
+          .from(intents)
+          .innerJoin(quotes, eq(quotes.id, intents.quoteId))
+          .where(where)
+          .orderBy(desc(intents.createdAt), desc(intents.id))
+          .limit(limit)
+          .offset(offset),
+        db
+          .select({ total: count() })
+          .from(intents)
+          .innerJoin(quotes, eq(quotes.id, intents.quoteId))
+          .where(where),
+      ]);
+
+      return reply.send({
+        items: rows.map(({ intent, quote }) => {
+          const req = quote.request as unknown as QuoteBody;
+          return {
+            id: intent.id,
+            quoteId: intent.quoteId,
+            customerId: quote.customerId,
+            originChainId: req.originChainId,
+            destChainId: req.destChainId,
+            amountIn: quote.amountIn,
+            feeAmount: quote.feeAmount,
+            status: intent.status,
+            originTx: intent.originTx,
+            destTx: intent.destTx,
+            error: intent.error,
+            createdAt: intent.createdAt.toISOString(),
+            updatedAt: intent.updatedAt.toISOString(),
+          };
+        }),
+        total,
+        limit,
+        offset,
       });
     }
   );

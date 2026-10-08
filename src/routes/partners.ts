@@ -1,12 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { eq } from "drizzle-orm";
 import { config } from "../config.js";
-import { generateApiKey } from "../auth/apiKey.js";
+import { generateApiKey, requireApiKey } from "../auth/apiKey.js";
 import { db } from "../db/index.js";
 import { apiKeys, partners } from "../db/schema.js";
 import {
   partnerCreateSchema,
   partnerResponseSchema,
+  partnerProfileResponseSchema,
   errorResponseSchema,
   toJsonSchema,
 } from "../schemas.js";
@@ -84,6 +85,52 @@ export async function partnerRoutes(app: FastifyInstance) {
         keyPrefix: key.keyPrefix,
         feeBps,
         rateLimitPerMin,
+      });
+    }
+  );
+
+  app.get(
+    "/v1/partners/me",
+    {
+      onRequest: requireApiKey,
+      schema: {
+        tags: ["partners"],
+        summary: "Current partner profile",
+        description:
+          "Profile of the business that owns the bearer API key, with the fee and rate limit in effect for this key. Requires a key created via POST /v1/partners.",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: toJsonSchema(partnerProfileResponseSchema),
+          400: toJsonSchema(errorResponseSchema),
+          401: toJsonSchema(errorResponseSchema),
+        },
+      },
+    },
+    async (request, reply) => {
+      const key = request.apiKey!;
+      if (!key.partnerId) {
+        return reply.code(400).send({ error: "api key is not linked to a partner" });
+      }
+      const [partner] = await db
+        .select()
+        .from(partners)
+        .where(eq(partners.id, key.partnerId))
+        .limit(1);
+      if (!partner) {
+        return reply.code(401).send({ error: "unauthorized" });
+      }
+      return reply.send({
+        partnerId: partner.id,
+        name: partner.name,
+        email: partner.email,
+        feeBps: key.feeBps,
+        rateLimitPerMin: key.rateLimitPerMin,
+        createdAt: partner.createdAt.toISOString(),
+        apiKey: {
+          id: key.id,
+          keyPrefix: key.keyPrefix,
+          createdAt: key.createdAt.toISOString(),
+        },
       });
     }
   );

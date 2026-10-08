@@ -202,6 +202,23 @@ async function main() {
   summary("legacy (pre-partner) key cannot register customers", legacyCust.status === 400, `${legacyCust.status}`);
   summary("legacy (pre-partner) key cannot read ledger", (await fetch(`${BASE}/v1/ledger`, { headers: auth })).status === 400, "");
 
+  // 5b. dashboard read endpoints
+  const meRes = await fetch(`${BASE}/v1/partners/me`, { headers: pAuth });
+  const me = (await json(meRes)) as any;
+  summary("GET /v1/partners/me returns profile", meRes.status === 200 && me.partnerId === signupBody.partnerId && me.feeBps === 10 && me.rateLimitPerMin === 30, `${meRes.status}, name=${S(me.name)} feeBps=${S(me.feeBps)} rateLimitPerMin=${S(me.rateLimitPerMin)}`);
+  const custListRes = await fetch(`${BASE}/v1/customers`, { headers: pAuth });
+  const custList = (await json(custListRes)) as any;
+  summary("GET /v1/customers lists customers", custListRes.status === 200 && custList.total === 1 && custList.items[0]?.customerId === cust.customerId, `${custListRes.status}, total=${S(custList.total)}`);
+  const quoteListRes = await fetch(`${BASE}/v1/quotes?customerId=${cust.customerId}`, { headers: pAuth });
+  const quoteList = (await json(quoteListRes)) as any;
+  summary("GET /v1/quotes?customerId lists attributed quote", quoteListRes.status === 200 && quoteList.total === 1 && quoteList.items[0]?.quoteId === qcust.quoteId && quoteList.items[0]?.netAmount === "1998000000000000000", `${quoteListRes.status}, total=${S(quoteList.total)} netAmount=${S(quoteList.items?.[0]?.netAmount)}`);
+  summary("legacy (pre-partner) key cannot list customers", (await fetch(`${BASE}/v1/customers`, { headers: auth })).status === 400, "");
+  const corsRes = await fetch(`${BASE}/v1/ledger`, {
+    method: "OPTIONS",
+    headers: { origin: "http://localhost:5173", "access-control-request-method": "GET", "access-control-request-headers": "authorization" },
+  });
+  summary("CORS preflight allows dashboard origin", corsRes.status === 204 && corsRes.headers.get("access-control-allow-origin") === "http://localhost:5173", `${corsRes.status}, allow-origin=${corsRes.headers.get("access-control-allow-origin")}`);
+
   // 6. submit + poll end-to-end
   const sample = await fetch(`${BASE}/v1/quotes`, {
     method: "POST",
@@ -239,6 +256,12 @@ async function main() {
     body: JSON.stringify({ quoteId: q.quoteId, signedPayload: "0x" + "cd".repeat(64) }),
   }));
   summary("idempotent re-submit returns same intentId", dupSubmit.intentId === subBody.intentId, `first=${subBody.intentId} second=${dupSubmit.intentId}`);
+  const intentListRes = await fetch(`${BASE}/v1/intents?status=${last.status}`, { headers: auth });
+  const intentList = (await json(intentListRes)) as any;
+  summary("GET /v1/intents?status lists the submitted intent", intentListRes.status === 200 && intentList.items.some((i: any) => i.id === subBody.intentId && i.status === last.status), `${intentListRes.status}, total=${S(intentList.total)} status=${last.status}`);
+  const quoteIntentRes = await json(await fetch(`${BASE}/v1/quotes?limit=200`, { headers: auth })) as any;
+  const listedQuote = quoteIntentRes.items?.find((x: any) => x.quoteId === q.quoteId);
+  summary("GET /v1/quotes shows intent status on the quote", listedQuote?.intent?.intentId === subBody.intentId, `intent=${S(listedQuote?.intent)}`);
 
   await db.delete(apiKeys).where(eq(apiKeys.partnerName, "report-runner"));
 
@@ -320,12 +343,20 @@ async function main() {
   lines.push(`Ledger: \`${ledger.totals.transactions}\` transaction, feeTotal \`${S(ledger.totals.feeTotal)}\`, attributed to customer \`${ledger.byCustomer?.[0]?.customerId}\`.  `);
   lines.push(`Legacy (pre-partner) keys cannot register customers or read the ledger → 400.`);
   lines.push(``);
+  lines.push(`### Dashboard read endpoints`);
+  lines.push(``);
+  lines.push(`\`GET /v1/partners/me\` → \`${meRes.status}\` (feeBps \`${me.feeBps}\`, rateLimitPerMin \`${me.rateLimitPerMin}\`).  `);
+  lines.push(`\`GET /v1/customers\` → \`${custListRes.status}\`, total \`${custList.total}\`.  `);
+  lines.push(`\`GET /v1/quotes?customerId=\` → \`${quoteListRes.status}\`, total \`${quoteList.total}\`, netAmount \`${quoteList.items?.[0]?.netAmount}\`.  `);
+  lines.push(`Lists return \`{ items, total, limit, offset }\`, newest first (default limit 50, max 200). CORS preflight from \`http://localhost:5173\` → \`${corsRes.status}\`.`);
+  lines.push(``);
 
   lines.push(`## 6. Intent lifecycle with real addresses (\`POST /v1/intents/submit\` + polling)`);
   lines.push(``);
   lines.push(`Submitted quote \`${q.quoteId}\` (WETH → Arc USDC, 1e18 in).  `);
   lines.push(`Submit (first): ${sub.status} \`${S(subBody)}\`  `);
-  lines.push(`Submit (same quote again, idempotent): \`${S(dupSubmit)}\``);
+  lines.push(`Submit (same quote again, idempotent): \`${S(dupSubmit)}\`  `);
+  lines.push(`Listed via \`GET /v1/intents?status=${last.status}\`: ${intentListRes.status}, total \`${intentList.total}\`.`);
   lines.push(``);
   lines.push(`| poll | status | originTx | destTx |`);
   lines.push(`|---|---:|---:|---:|`);
@@ -342,6 +373,7 @@ async function main() {
   lines.push(`6. **Arc decimals caveat:** chain-level native gas reports 18 decimals while the USDC ERC-20 interface reports 6. Quotes use the 6-decimal token amount.`);
   lines.push(`7. **Still simulated:** the actual fill price, the origin-chain relay transaction, and Arc settlement. Real \`estimatedOut\`/\`minOut\` require a real quote/solver source; \`unsignedTx\` and submitted intents are placeholders.`);
   lines.push(`8. **Business self-serve:** \`POST /v1/partners\` provisions a business (api key shown once, \`feeBps=10\` default). Customers registered per business expect \`customerId\` on quotes; \`GET /v1/ledger\` reports fees earned, per customer. Legacy keys (no partner) keep working for quotes but cannot use customers/ledger.`);
+  lines.push(`9. **Dashboard reads:** \`GET /v1/customers\`, \`GET /v1/quotes\`, \`GET /v1/intents\` and \`GET /v1/partners/me\` back the partner dashboard. Quote/intent lists are scoped to the calling API key (same as the ledger) and return stored status without polling upstream. Browser access is governed by \`CORS_ORIGINS\`.`);
 
   writeFileSync("reports/ENDPOINT_TEST_REPORT.md", lines.join("\n"));
   console.log(`Wrote reports/ENDPOINT_TEST_REPORT.md — ${passed}/${results.length} passed`);
