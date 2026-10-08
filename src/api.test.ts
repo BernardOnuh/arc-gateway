@@ -533,6 +533,10 @@ describe("partner onboarding, customers and ledger", () => {
 
   beforeAll(async () => {
     app = await buildApp();
+    // POST /v1/partners is limited to 5/min/IP in shared Redis; clear the
+    // counters so back-to-back test runs don't trip it.
+    const rlKeys = await app.redis.keys("gateway-rl*");
+    if (rlKeys.length > 0) await app.redis.del(...rlKeys);
     const legacy = generateApiKey();
     await db.insert(apiKeys).values({
       partnerName: "legacy-no-partner",
