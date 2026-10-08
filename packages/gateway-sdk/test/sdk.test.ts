@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { GatewayClient, GatewayError } from "../src/index.js";
+import { CustomerClient, GatewayClient, GatewayError } from "../src/index.js";
 
 interface Call {
   url: string;
@@ -138,6 +138,36 @@ describe("GatewayClient", () => {
     expect(JSON.parse(calls[2].init.body!)).toEqual({ allowedOrigins: ["https://shop.example.com"] });
     expect(JSON.parse(calls[3].init.body!)).toEqual({ keyId: "k-1" });
     expect(calls.every((c) => c.init.headers!["authorization"] === "Bearer gw_live_testkey")).toBe(true);
+  });
+
+  it("createSetupLink posts for the customer with the partner key", async () => {
+    const { client, calls } = makeClient(ok({ customerId: "c/1", token: "cst_x", expiresAt: "t" }));
+    await client.createSetupLink("c/1");
+    expect(calls[0].url).toBe("http://gw.test/v1/customers/c%2F1/setup-link");
+    expect(calls[0].init.method).toBe("POST");
+  });
+
+  it("CustomerClient sends the session token, but not on setup/login", async () => {
+    const calls: Call[] = [];
+    const fetchImpl = (async (url: string, init: any) => {
+      calls.push({ url, init });
+      return { ok: true, status: 200, text: async () => "{}" } as Response;
+    }) as unknown as typeof fetch;
+    const customer = new CustomerClient({ baseUrl: "http://gw.test", sessionToken: "cs_abc", fetchImpl });
+    await customer.setup({ token: "cst_x", email: "a@b.co", password: "p" });
+    await customer.login({ partnerId: "p", email: "a@b.co", password: "p" });
+    await customer.account();
+    await customer.changePassword({ currentPassword: "a", newPassword: "b" });
+    await customer.setPayoutWallet({ address: "0x1", chainId: 5042 });
+    await customer.logout();
+    expect(calls.map((c) => `${c.init.method} ${c.url.replace("http://gw.test", "")} ${c.init.headers!["authorization"] ?? "-"}`)).toEqual([
+      "POST /v1/customer-auth/setup -",
+      "POST /v1/customer-auth/login -",
+      "GET /v1/customer/me Bearer cs_abc",
+      "POST /v1/customer/me/password Bearer cs_abc",
+      "POST /v1/customer/me/wallet Bearer cs_abc",
+      "POST /v1/customer-auth/logout Bearer cs_abc",
+    ]);
   });
 
   it("default fetch is called without the client bound as this", async () => {

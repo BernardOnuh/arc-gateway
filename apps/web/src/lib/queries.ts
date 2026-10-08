@@ -111,3 +111,12 @@ export function useRevokeApiKey() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["api-keys", apiKey] }),
   });
 }
+
+export function useCreateSetupLink() {
+  const { client, apiKey } = useGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (customerId: string) => client.createSetupLink(customerId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["customers", apiKey] }),
+  });
+}

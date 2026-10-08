@@ -892,6 +892,10 @@ describe("dashboard list endpoints and CORS", () => {
       customerId: customerB,
       externalId: "list_b",
       recipientAddress: "0x00000000000000000000000000000000000000bb",
+      email: null,
+      hasPassword: false,
+      payoutWallet: null,
+      payoutChainId: null,
       createdAt: expect.any(String),
     });
   });

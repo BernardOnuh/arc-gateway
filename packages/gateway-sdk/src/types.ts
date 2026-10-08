@@ -20,7 +20,38 @@ export interface Customer {
   customerId: string;
   externalId: string;
   recipientAddress: string;
+  /** Set by the customer during account setup. */
+  email: string | null;
+  hasPassword: boolean;
+  payoutWallet: string | null;
+  payoutChainId: number | null;
   createdAt: string;
+}
+
+export interface SetupLink {
+  customerId: string;
+  /** One-time token (cst_…), valid 72h. Shown once. */
+  token: string;
+  expiresAt: string;
+}
+
+export interface CustomerAccount {
+  customerId: string;
+  partnerId: string;
+  partnerName: string;
+  externalId: string;
+  email: string | null;
+  recipientAddress: string;
+  payoutWallet: string | null;
+  payoutChainId: number | null;
+  /** Always false for now: wallets are stored for future payouts. */
+  payoutsEnabled: boolean;
+}
+
+export interface CustomerSession {
+  sessionToken: string;
+  expiresAt: string;
+  account: CustomerAccount;
 }
 
 export interface QuoteParams {

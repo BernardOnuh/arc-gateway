@@ -48,6 +48,10 @@ const customer = {
   customerId: CUSTOMER_ID,
   externalId: "=user_42",
   recipientAddress: "0x1111111111111111111111111111111111111111",
+  email: null,
+  hasPassword: false,
+  payoutWallet: null,
+  payoutChainId: null,
   createdAt: "2026-10-08T10:00:00.000Z",
 };
 
@@ -207,6 +211,25 @@ describe("customers", () => {
       externalId: "user_99",
       recipientAddress: "0x2222222222222222222222222222222222222222",
     });
+  });
+});
+
+describe("customer accounts (partner side)", () => {
+  it("creates a one-time setup link and shows the customer sign-in page", async () => {
+    const user = userEvent.setup();
+    signedIn({
+      [`POST /v1/customers/${CUSTOMER_ID}/setup-link`]: () => ({
+        status: 201,
+        body: { customerId: CUSTOMER_ID, token: "cst_onetime", expiresAt: "2026-10-11T10:00:00.000Z" },
+      }),
+    });
+    renderApp("/app/customers");
+    expect(await screen.findByText("Not set up")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Create setup link" }));
+    expect(await screen.findByTestId("setup-link")).toHaveTextContent(
+      `${window.location.origin}/account/setup?token=cst_onetime`
+    );
+    expect(await screen.findByText(`${window.location.origin}/account/login?partner=p-1`)).toBeInTheDocument();
   });
 });
 

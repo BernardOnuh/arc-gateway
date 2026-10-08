@@ -258,6 +258,30 @@ async function main() {
   const newLedger = (await json(await fetch(`${BASE}/v1/ledger`, { headers: { authorization: `Bearer ${rotateBody.apiKey}` } }))) as any;
   summary("rotate issues a new key, revokes the old, keeps history", rotateRes.status === 201 && oldAfter.status === 401 && newLedger.totals?.transactions === ledger.totals.transactions + 1, `rotate ${rotateRes.status}, old key ${oldAfter.status}, ledger tx ${S(newLedger.totals?.transactions)}`);
 
+  // 5d. customer accounts (setup link -> password -> session -> wallet)
+  const p2Auth = { authorization: `Bearer ${rotateBody.apiKey}` };
+  const linkRes = await fetch(`${BASE}/v1/customers/${cust.customerId}/setup-link`, { method: "POST", headers: p2Auth });
+  const link = (await json(linkRes)) as any;
+  summary("POST /v1/customers/:id/setup-link", linkRes.status === 201 && /^cst_/.test(link.token ?? ""), `${linkRes.status}, expires ${S(link.expiresAt)}`);
+  const custEmail = `report-${now}@example.com`;
+  const setupRes = await fetch(`${BASE}/v1/customer-auth/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: link.token, email: custEmail, password: "report passphrase 1" }) });
+  const setupBody = (await json(setupRes)) as any;
+  summary("POST /v1/customer-auth/setup", setupRes.status === 200 && /^cs_/.test(setupBody.sessionToken ?? "") && setupBody.account?.email === custEmail, `${setupRes.status}`);
+  const reuse = await fetch(`${BASE}/v1/customer-auth/setup`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ token: link.token, email: custEmail, password: "report passphrase 1" }) });
+  summary("setup link works only once", reuse.status === 400, `${reuse.status}`);
+  const cAuth = { authorization: `Bearer ${setupBody.sessionToken}` };
+  const walletRes = await fetch(`${BASE}/v1/customer/me/wallet`, { method: "POST", headers: { ...cAuth, "content-type": "application/json" }, body: JSON.stringify({ address: "0x00000000000000000000000000000000000000d1", chainId: 5042 }) });
+  const walletBody = (await json(walletRes)) as any;
+  summary("POST /v1/customer/me/wallet stores payout wallet", walletRes.status === 200 && walletBody.payoutChainId === 5042 && walletBody.payoutsEnabled === false, `${walletRes.status}`);
+  const badLogin = await fetch(`${BASE}/v1/customer-auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ partnerId: signupBody.partnerId, email: custEmail, password: "wrong" }) });
+  const goodLogin = await fetch(`${BASE}/v1/customer-auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ partnerId: signupBody.partnerId, email: custEmail, password: "report passphrase 1" }) });
+  summary("POST /v1/customer-auth/login", badLogin.status === 401 && goodLogin.status === 200, `wrong password ${badLogin.status}, right ${goodLogin.status}`);
+  const custView = (await json(await fetch(`${BASE}/v1/customers`, { headers: p2Auth }))) as any;
+  const custRow = custView.items?.find((c: any) => c.customerId === cust.customerId);
+  summary("partner sees account status, never the hash", custRow?.hasPassword === true && custRow?.payoutWallet === "0x00000000000000000000000000000000000000d1" && !JSON.stringify(custView).includes("scrypt"), `hasPassword=${S(custRow?.hasPassword)}`);
+  const sessionOnLedger = await fetch(`${BASE}/v1/ledger`, { headers: cAuth });
+  summary("customer session is not a partner key", sessionOnLedger.status === 401, `${sessionOnLedger.status}`);
+
   // 6. submit + poll end-to-end
   const sample = await fetch(`${BASE}/v1/quotes`, {
     method: "POST",
@@ -399,6 +423,11 @@ async function main() {
   lines.push(`Rotate → \`${rotateRes.status}\`; old key → \`${oldAfter.status}\`; the new key sees the same ledger (\`${S(newLedger.totals?.transactions)}\` transactions).`);
   lines.push(``);
 
+  lines.push(`### Customer accounts`);
+  lines.push(``);
+  lines.push(`Setup link \`${linkRes.status}\` → setup \`${setupRes.status}\` (reuse \`${reuse.status}\`) → wallet \`${walletRes.status}\` (chain ${walletBody.payoutChainId}, payoutsEnabled \`${walletBody.payoutsEnabled}\`) → login wrong/right \`${badLogin.status}\`/\`${goodLogin.status}\`. Customer session on a partner route → \`${sessionOnLedger.status}\`.`);
+  lines.push(``);
+
   lines.push(`## 6. Intent lifecycle with real addresses (\`POST /v1/intents/submit\` + polling)`);
   lines.push(``);
   lines.push(`Submitted quote \`${q.quoteId}\` (WETH → Arc USDC, 1e18 in).  `);
@@ -423,6 +452,7 @@ async function main() {
   lines.push(`8. **Business self-serve:** \`POST /v1/partners\` provisions a business (api key shown once, \`feeBps=10\` default). Customers registered per business expect \`customerId\` on quotes; \`GET /v1/ledger\` reports fees earned, per customer. Legacy keys (no partner) keep working for quotes but cannot use customers/ledger.`);
   lines.push(`9. **Dashboard reads:** \`GET /v1/customers\`, \`GET /v1/quotes\`, \`GET /v1/intents\` and \`GET /v1/partners/me\` back the partner dashboard. Quotes, intents and the ledger are scoped to the partner across all of its keys (legacy keys without a partner see only their own rows) and lists return stored status without polling upstream. Dashboard routes follow \`CORS_ORIGINS\`.`);
   lines.push(`10. **Publishable keys:** \`pk_live_\` keys can only create quotes and read intent status, only from their allowed origins. They cannot submit intents, because submitting spends gateway funds; partners submit from their server with the secret key. Rotation revokes the old secret key atomically and keeps all history.`);
+  lines.push(`11. **Customer accounts:** partners issue one-time setup links (72h; no email delivery yet). Passwords use salted scrypt; sessions are opaque \`cs_\` tokens stored as sha256 with a 7-day expiry; 5 failed logins per account lock it for 15 minutes. Payout wallets are stored only; payout execution is deferred.`);
 
   writeFileSync("reports/ENDPOINT_TEST_REPORT.md", lines.join("\n"));
   console.log(`Wrote reports/ENDPOINT_TEST_REPORT.md — ${passed}/${results.length} passed`);

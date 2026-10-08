@@ -22,7 +22,7 @@ Authoritative plan for building the customer-facing and partner-facing frontend 
 | 3 | Marketing pages + `/signup` with one-time key reveal | ✅ done |
 | 4 | Dashboard: login, overview, customers, ledger + CSV, transactions, settings (+ `byToken` on `GET /v1/ledger`) | ✅ done |
 | 5 | Publishable keys, key rotate/revoke, `ArcSwapWidget` (React + web component), partner-wide scope | ✅ done |
-| 6 | Customer accounts: password (scrypt) + sessions + payout wallet; payout execution deferred | next |
+| 6 | Customer accounts: setup links, password (scrypt) + sessions + payout wallet; payout execution deferred | ✅ done |
 
 ---
 
@@ -142,8 +142,7 @@ New tables:
 | `GET` | `/v1/intents` | partner key | ✅ built — list intents for a key: `?status=&customerId=&limit=&offset=` |
 | `GET` | `/v1/partners/me` | partner key | ✅ built — partner profile for `/settings` |
 | `GET`/`POST` | `/v1/partners/me/api-keys[/rotate,/publishable,/revoke]` | partner key | ✅ built (step 5) — see §9 "API keys" |
-| `POST` | `/v1/customers/:id/password` | customer session | Set/change customer password |
-| `POST` | `/v1/customers/:id/wallet` | customer session | Set payout wallet + chain |
+| `POST` | `/v1/customer/me/password`, `/v1/customer/me/wallet` (+ setup link, setup, login, logout, me) | customer session | ✅ built (step 6) — see §9 "Customer accounts" |
 
 ### 4.3 Customer auth model (no new libraries required)
 
@@ -195,7 +194,7 @@ New tables:
 
 ## 7. Ground truth to verify against (live today)
 
-`curl http://localhost:3000/` lists 22 endpoints. Key invariants the frontend must respect:
+`curl http://localhost:3000/` lists 33 endpoints (after step 6). Key invariants the frontend must respect:
 
 - A quote response is `amountIn` (full), `feeAmount`, `feeBps`, `netAmount`, `estimatedOut`, `minOut`, `expiresAt`, `unsignedTx` (nullable). Fee = `amountIn * feeBps / 10000`.
 - `POST /v1/quotes` rejects: bad token/chain (400), same origin/dest (400), amount ≤ 0 (400), past deadline (400), `customerId` not owned by the key's partner (400).
@@ -208,13 +207,13 @@ New tables:
 
 ## 8. Definition of done (checklist for the receiving agent)
 
-- [ ] `apps/landing`, `apps/dashboard`, `packages/arc-widget`, `packages/api-client` build + lint + test green in the pnpm workspace
-- [ ] Landing `/signup` produces a working key against a live gateway and the key is shown exactly once with a copy + storage warning
-- [ ] Dashboard login validates the API key; `/`, `/customers`, `/ledger` render real data from the gateway; `/transactions` exists once list endpoints land
-- [ ] Widget submits a quote and continuously surfaces status through terminal state, emitting typed events
-- [ ] Customer password set/change + payout-wallet endpoints implemented with secure hashing/sessions; frontend flow exists; payout execution explicitly deferred
-- [ ] Swagger `/docs` and `reports/ENDPOINT_TEST_REPORT.md` updated for every backend addition (53/53 after step 5)
-- [ ] No secrets in any frontend bundle; only `VITE_GATEWAY_URL` envs
+- [x] `apps/web` (marketing + dashboard + customer accounts), `packages/arc-widget`, `packages/gateway-sdk` build + test green (`packages/api-client` deferred per §0)
+- [x] `/signup` produces a working key against a live gateway; key shown exactly once with copy + storage warning
+- [x] Dashboard login validates the API key; overview, customers, transactions, ledger (+CSV), widget and settings render real gateway data
+- [x] Widget quotes with a publishable key, submits through the partner's server, and surfaces status through a terminal state with typed events
+- [x] Customer password set/change + payout-wallet endpoints with scrypt hashing and hashed sessions; frontend flow at `/account`; payout execution deferred
+- [x] Swagger `/docs` and `reports/ENDPOINT_TEST_REPORT.md` updated for every backend addition (60/60 after step 6)
+- [x] No secrets in any frontend bundle; only `VITE_GATEWAY_URL` envs
 
 ---
 
@@ -382,9 +381,26 @@ SDK: `client.listCustomers()`, `client.listQuotes()`, `client.listIntents()`, `c
 
 Publishable keys (`pk_live_…`) are accepted only on `POST /v1/quotes` and `GET /v1/intents/:id`, and only with an `Origin` header in the key's allowlist; anything else → `403`. Those routes (plus `/v1/chains`, `/v1/tokens`) answer CORS from any origin; all other routes follow `CORS_ORIGINS`.
 
-### Planned additions (not built yet)
+### Customer accounts — built in step 6
 
-| Method | Path | Auth | Purpose |
+The plan's `/v1/customers/:id/password|wallet` became session-scoped `/v1/customer/me/*` routes: the session already identifies the customer, so there's no id to tamper with.
+
+| Method | Path | Auth | Notes |
 |---|---|---|---|
-| `POST` | `/v1/customers/:id/password` | customer session | Set/change customer password |
-| `POST` | `/v1/customers/:id/wallet` | customer session | Set payout wallet + chain |
+| `POST` | `/v1/customers/:id/setup-link` | partner secret key | `201 { customerId, token: "cst_…", expiresAt }`. One-time, 72h; replaces earlier unused links; doubles as password reset. **No email is sent**: the dashboard shows `/account/setup?token=…` for the partner to send. |
+| `POST` | `/v1/customer-auth/setup` | — | `{ token, email, password }` (password ≥ 10 chars). Sets email+password, signs out other sessions, returns `{ sessionToken: "cs_…", expiresAt, account }`. `400` bad/used/expired link, `409` email used by another customer of the partner. |
+| `POST` | `/v1/customer-auth/login` | — | `{ partnerId, email, password }` → session. `401` generic message; 5 failures per account in 15 min → `429`. |
+| `POST` | `/v1/customer-auth/logout` | customer session | Deletes the session. |
+| `GET` | `/v1/customer/me` | customer session | `{ customerId, partnerId, partnerName, externalId, email, recipientAddress, payoutWallet, payoutChainId, payoutsEnabled: false }` |
+| `POST` | `/v1/customer/me/password` | customer session | `{ currentPassword, newPassword }`; signs out other sessions. |
+| `POST` | `/v1/customer/me/wallet` | customer session | `{ address, chainId }` (supported chain). Stored only. |
+
+`GET /v1/customers` items now include `email`, `hasPassword`, `payoutWallet`, `payoutChainId`. Passwords: scrypt (N=16384, r=8, p=1, 16-byte salt), constant-time verify, dummy verify for unknown emails. Sessions: random `cs_` token, sha256 stored, 7-day expiry. Customer sessions are rejected on partner routes and vice versa.
+
+### Still open (not built)
+
+- Email delivery for setup/reset links (the dashboard shows the link for the partner to send).
+- Fee payouts to customer wallets (wallets are stored; `payoutsEnabled` is false).
+- Verifying `signedPayload` on submit (currently unused; the gateway wallet signs).
+- Exchanging the dashboard API key for an httpOnly session cookie.
+- `packages/api-client` (OpenAPI-generated types) — deferred per §0.

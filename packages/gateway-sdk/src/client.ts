@@ -18,6 +18,7 @@ import type {
   QuoteParams,
   RegisterPartnerParams,
   RotateApiKeyResult,
+  SetupLink,
   RegisterPartnerResult,
   SubmitIntentParams,
   SubmitIntentResult,
@@ -49,11 +50,11 @@ export class GatewayClient {
     this.apiKey = options.apiKey;
   }
 
-  private resolveKey(apiKey?: string): string | undefined {
+  protected resolveKey(apiKey?: string): string | undefined {
     return apiKey ?? this.apiKey;
   }
 
-  private async request<T>(
+  protected async request<T>(
     method: string,
     path: string,
     options: {
@@ -121,6 +122,11 @@ export class GatewayClient {
 
   revokeApiKey(keyId: string, apiKey?: string): Promise<ApiKeySummary> {
     return this.request("POST", "/v1/partners/me/api-keys/revoke", { body: { keyId }, apiKey });
+  }
+
+  /** One-time token for the customer to set their password (no email is sent). */
+  createSetupLink(customerId: string, apiKey?: string): Promise<SetupLink> {
+    return this.request("POST", `/v1/customers/${encodeURIComponent(customerId)}/setup-link`, { apiKey });
   }
 
   createCustomer(params: CreateCustomerParams, apiKey?: string): Promise<Customer> {

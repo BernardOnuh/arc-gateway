@@ -12,6 +12,19 @@ import {
   toJsonSchema,
 } from "../schemas.js";
 
+export function toCustomerResponse(c: typeof customers.$inferSelect) {
+  return {
+    customerId: c.id,
+    externalId: c.externalId,
+    recipientAddress: c.recipientAddress,
+    email: c.email,
+    hasPassword: c.passwordHash !== null,
+    payoutWallet: c.payoutWallet,
+    payoutChainId: c.payoutChainId,
+    createdAt: c.createdAt.toISOString(),
+  };
+}
+
 export async function customerRoutes(app: FastifyInstance) {
   app.post(
     "/v1/customers",
@@ -54,12 +67,7 @@ export async function customerRoutes(app: FastifyInstance) {
         )
         .limit(1);
       if (existing.length > 0) {
-        return reply.send({
-          customerId: existing[0].id,
-          externalId: existing[0].externalId,
-          recipientAddress: existing[0].recipientAddress,
-          createdAt: existing[0].createdAt.toISOString(),
-        });
+        return reply.send(toCustomerResponse(existing[0]));
       }
 
       const [customer] = await db
@@ -67,12 +75,7 @@ export async function customerRoutes(app: FastifyInstance) {
         .values({ partnerId: key.partnerId, externalId, recipientAddress })
         .returning();
 
-      return reply.code(201).send({
-        customerId: customer.id,
-        externalId: customer.externalId,
-        recipientAddress: customer.recipientAddress,
-        createdAt: customer.createdAt.toISOString(),
-      });
+      return reply.code(201).send(toCustomerResponse(customer));
     }
   );
 
@@ -118,12 +121,7 @@ export async function customerRoutes(app: FastifyInstance) {
       ]);
 
       return reply.send({
-        items: rows.map((c) => ({
-          customerId: c.id,
-          externalId: c.externalId,
-          recipientAddress: c.recipientAddress,
-          createdAt: c.createdAt.toISOString(),
-        })),
+        items: rows.map(toCustomerResponse),
         total,
         limit,
         offset,

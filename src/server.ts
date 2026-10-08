@@ -12,6 +12,7 @@ import { catalogRoutes } from "./routes/catalog.js";
 import { partnerRoutes } from "./routes/partners.js";
 import { apiKeyRoutes } from "./routes/apiKeys.js";
 import { customerRoutes } from "./routes/customers.js";
+import { customerAccountRoutes } from "./routes/customerAccounts.js";
 import { ledgerRoutes } from "./routes/ledger.js";
 import { quoteRoutes } from "./routes/quotes.js";
 import { intentRoutes } from "./routes/intents.js";
@@ -69,12 +70,14 @@ export async function buildApp() {
       components: {
         securitySchemes: {
           bearerAuth: { type: "http", scheme: "bearer", description: "Partner API key (gw_live_...)" },
+          customerSession: { type: "http", scheme: "bearer", description: "Customer session token (cs_...) from /v1/customer-auth" },
         },
       },
       tags: [
         { name: "meta", description: "Service discovery, health and auth check" },
         { name: "partners", description: "Business onboarding and API-key creation" },
         { name: "customers", description: "End-customer registry for partner transactions" },
+        { name: "customer-accounts", description: "End-customer self-service: password, sessions, payout wallet" },
         { name: "quotes", description: "Chain/token discovery and fee-adjusted swap quotes" },
         { name: "intents", description: "Intent submission and status polling" },
         { name: "ledger", description: "Partner revenue and per-customer transaction breakdown" },
@@ -109,6 +112,7 @@ export async function buildApp() {
   await partnerRoutes(app);
   await apiKeyRoutes(app);
   await customerRoutes(app);
+  await customerAccountRoutes(app);
   await ledgerRoutes(app);
   await quoteRoutes(app);
   await intentRoutes(app);

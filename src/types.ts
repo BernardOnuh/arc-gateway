@@ -1,5 +1,5 @@
 import type { Redis } from "ioredis";
-import type { apiKeys } from "./db/schema.js";
+import type { apiKeys, customers } from "./db/schema.js";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -11,5 +11,8 @@ declare module "fastify" {
   }
   interface FastifyRequest {
     apiKey?: typeof apiKeys.$inferSelect;
+    /** Set by requireCustomerSession. */
+    customer?: typeof customers.$inferSelect;
+    customerSessionId?: string;
   }
 }

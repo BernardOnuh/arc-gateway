@@ -76,6 +76,10 @@ export const customerResponseSchema = z.object({
   customerId: z.string(),
   externalId: z.string(),
   recipientAddress: z.string(),
+  email: z.string().nullable().describe("Set by the customer when they set up their account."),
+  hasPassword: z.boolean().describe("True once the customer has set up their account."),
+  payoutWallet: z.string().nullable().describe("Where the customer wants future fee payouts (stored only; payouts not live)."),
+  payoutChainId: z.number().int().nullable(),
   createdAt: z.string(),
 });
 
@@ -338,6 +342,61 @@ export const publishableKeyCreateSchema = z.object({
 export const apiKeyRevokeSchema = z.object({
   keyId: z.string().uuid().describe("Id of the key to revoke, from GET /v1/partners/me/api-keys."),
 });
+
+// ----- customer accounts -----
+
+const passwordSchema = z.string().min(10, "password must be at least 10 characters").max(200);
+const emailSchema = z.string().trim().toLowerCase().email().max(254);
+
+export const setupLinkResponseSchema = z.object({
+  customerId: z.string(),
+  token: z.string().describe("One-time setup token (cst_…). Put it in a link for the customer; it is shown once."),
+  expiresAt: z.string(),
+});
+
+export const customerIdParamsSchema = z.object({ id: z.string().uuid() });
+
+export const customerSetupSchema = z.object({
+  token: z.string().min(1).describe("Setup token from the partner's link."),
+  email: emailSchema,
+  password: passwordSchema,
+});
+
+export const customerLoginSchema = z.object({
+  partnerId: z.string().uuid().describe("The business the customer belongs to."),
+  email: emailSchema,
+  password: z.string().min(1).max(200),
+});
+
+export const customerPasswordChangeSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: passwordSchema,
+});
+
+export const customerWalletSchema = z.object({
+  address: z.string().regex(/^0x[0-9a-fA-F]{40}$/, "must be a valid 0x address"),
+  chainId: z.number().int().positive().describe("Chain for payouts, from GET /v1/chains (e.g. 1 Ethereum, 5042 Arc)."),
+});
+
+export const customerAccountSchema = z.object({
+  customerId: z.string(),
+  partnerId: z.string(),
+  partnerName: z.string(),
+  externalId: z.string(),
+  email: z.string().nullable(),
+  recipientAddress: z.string(),
+  payoutWallet: z.string().nullable(),
+  payoutChainId: z.number().int().nullable(),
+  payoutsEnabled: z.boolean().describe("False: wallets are stored for future payouts; nothing is paid out yet."),
+});
+
+export const customerSessionResponseSchema = z.object({
+  sessionToken: z.string().describe("Bearer token (cs_…) for /v1/customer/* routes."),
+  expiresAt: z.string(),
+  account: customerAccountSchema,
+});
+
+export const okResponseSchema = z.object({ ok: z.literal(true) });
 
 export type QuoteBody = z.infer<typeof quoteBodySchema>;
 export type SubmitBody = z.infer<typeof submitBodySchema>;

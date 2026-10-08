@@ -9,6 +9,7 @@ import { Signup } from "./pages/marketing/Signup";
 import { NotFound } from "./pages/NotFound";
 
 const DashboardRoutes = lazy(() => import("./pages/app/DashboardRoutes"));
+const AccountRoutes = lazy(() => import("./pages/account/AccountRoutes"));
 
 export function App() {
   return (
@@ -26,6 +27,14 @@ export function App() {
         element={
           <Suspense fallback={<div className="p-8 text-sm text-slate-500">Loading…</div>}>
             <DashboardRoutes />
+          </Suspense>
+        }
+      />
+      <Route
+        path="account/*"
+        element={
+          <Suspense fallback={<div className="p-8 text-sm text-slate-500">Loading…</div>}>
+            <AccountRoutes />
           </Suspense>
         }
       />

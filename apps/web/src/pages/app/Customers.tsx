@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import type { LedgerCustomer } from "@arc/gateway-sdk";
+import type { Customer, LedgerCustomer } from "@arc/gateway-sdk";
+import { CopyButton } from "../../components/CopyButton";
 import {
   buttonClass,
   Card,
@@ -14,7 +15,7 @@ import {
 } from "../../components/dashboard/ui";
 import { describeError } from "../../lib/gateway";
 import { formatDate, shortId } from "../../lib/format";
-import { useCreateCustomer, useCustomers, useLedger } from "../../lib/queries";
+import { useCreateCustomer, useCreateSetupLink, useCustomers, useLedger, usePartnerProfile } from "../../lib/queries";
 
 const PAGE_SIZE = 25;
 
@@ -30,7 +31,10 @@ export function Customers() {
 
   return (
     <>
-      <PageTitle title="Customers" intro="End customers you've registered. Attribute quotes to them with customerId." />
+      <PageTitle
+        title="Customers"
+        intro="End customers you've registered. Attribute quotes to them with customerId. Send a setup link so they can manage their account; we don't email it for you yet."
+      />
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <Card title={customers.data ? `${customers.data.total} customers` : "Customers"}>
           {customers.isPending ? (
@@ -49,6 +53,7 @@ export function Customers() {
                       <th className="py-2 pr-4 font-medium">Receiving address</th>
                       <th className="py-2 pr-4 font-medium">Transactions</th>
                       <th className="py-2 pr-4 font-medium">Fees earned</th>
+                      <th className="py-2 pr-4 font-medium">Account</th>
                       <th className="py-2 font-medium">Added</th>
                     </tr>
                   </thead>
@@ -71,6 +76,9 @@ export function Customers() {
                           </td>
                           <td className="py-2 pr-4">{r?.transactions ?? 0}</td>
                           <td className="py-2 pr-4">{r ? tokenTotalsText(r.byToken, "feeTotal") : "—"}</td>
+                          <td className="py-2 pr-4">
+                            <AccountCell customer={c} />
+                          </td>
                           <td className="whitespace-nowrap py-2 text-slate-500">{formatDate(c.createdAt)}</td>
                         </tr>
                       );
@@ -82,9 +90,77 @@ export function Customers() {
             </>
           )}
         </Card>
-        <AddCustomer onAdded={() => setOffset(0)} />
+        <div className="space-y-6">
+          <AddCustomer onAdded={() => setOffset(0)} />
+          <CustomerSignInLink />
+        </div>
       </div>
     </>
+  );
+}
+
+function CustomerSignInLink() {
+  const profile = usePartnerProfile();
+  if (!profile.data) return null;
+  const url = `${window.location.origin}/account/login?partner=${profile.data.partnerId}`;
+  return (
+    <Card title="Customer sign-in page">
+      <p className="text-sm text-slate-500">
+        Customers who've set up their account sign in here to manage their password and payout wallet.
+      </p>
+      <code className="mt-3 block break-all rounded bg-slate-50 p-2 font-mono text-xs">{url}</code>
+      <CopyButton text={url} label="Copy link" className="mt-2" />
+    </Card>
+  );
+}
+
+function AccountCell({ customer }: { customer: Customer }) {
+  const create = useCreateSetupLink();
+  const [link, setLink] = useState<{ url: string; expiresAt: string } | null>(null);
+
+  async function makeLink() {
+    try {
+      const res = await create.mutateAsync(customer.customerId);
+      setLink({ url: `${window.location.origin}/account/setup?token=${encodeURIComponent(res.token)}`, expiresAt: res.expiresAt });
+    } catch {
+      // shown below via create.error
+    }
+  }
+
+  return (
+    <div className="min-w-[10rem] text-xs">
+      {customer.hasPassword ? (
+        <span className="rounded-full bg-green-50 px-2 py-0.5 font-medium text-green-700" title={customer.email ?? ""}>
+          Active
+        </span>
+      ) : (
+        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">Not set up</span>
+      )}
+      {customer.payoutWallet && <span className="ml-1 text-slate-500" title={customer.payoutWallet}>· wallet set</span>}
+      <div className="mt-1">
+        {link ? (
+          <div className="space-y-1">
+            <code data-testid="setup-link" className="block max-w-[16rem] break-all rounded bg-slate-50 p-1 font-mono">
+              {link.url}
+            </code>
+            <div className="flex items-center gap-2">
+              <CopyButton text={link.url} label="Copy link" />
+              <span className="text-slate-500">expires {formatDate(link.expiresAt)}</span>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="text-brand-600 hover:underline disabled:opacity-60"
+            disabled={create.isPending}
+            onClick={makeLink}
+          >
+            {customer.hasPassword ? "Password reset link" : "Create setup link"}
+          </button>
+        )}
+        {create.error && <p role="alert" className="text-red-600">{describeError(create.error)}</p>}
+      </div>
+    </div>
   );
 }
 

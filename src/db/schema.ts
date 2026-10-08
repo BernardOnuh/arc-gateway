@@ -37,6 +37,13 @@ export const customers = pgTable(
       .references(() => partners.id, { onDelete: "cascade" }),
     externalId: text("external_id").notNull(),
     recipientAddress: text("recipient_address").notNull(),
+    /** Customer self-service account (set via a partner-issued setup link). Lowercased. */
+    email: text("email"),
+    /** scrypt$N$r$p$salt$hash; null until the customer sets a password. */
+    passwordHash: text("password_hash"),
+    /** Where future fee payouts go. Stored only; payouts are not executed yet. */
+    payoutWallet: text("payout_wallet"),
+    payoutChainId: integer("payout_chain_id"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => ({
@@ -44,8 +51,31 @@ export const customers = pgTable(
       table.partnerId,
       table.externalId
     ),
+    partnerEmailUnique: uniqueIndex("customers_partner_email_unique").on(table.partnerId, table.email),
   })
 );
+
+export const customerSessions = pgTable("customer_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id")
+    .notNull()
+    .references(() => customers.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+/** One-time setup/reset links. No email delivery yet: the partner hands the link over. */
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id")
+    .notNull()
+    .references(() => customers.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
 
 export const apiKeys = pgTable(
   "api_keys",
