@@ -1,19 +1,15 @@
-import rateLimit from "@fastify/rate-limit";
-import Redis from "ioredis";
-import { FastifyPluginAsync } from "fastify";
+import type { RateLimitPluginOptions } from "@fastify/rate-limit";
+import type { Redis } from "ioredis";
 
-export const rateLimitPlugin: FastifyPluginAsync<{ redisUrl: string; rateLimitPerMin?: number }> = async (
-  fastify,
-  opts
-) => {
-  const redis = new (Redis as any)(opts.redisUrl);
-  await fastify.register(rateLimit, {
+// IP-level guard applied to every route. Per-partner limits live in
+// auth/apiKey.ts and use api_keys.rate_limit_per_min.
+export function globalRateLimitOptions(redis: Redis, maxPerMinute = 600): RateLimitPluginOptions {
+  return {
     redis,
     nameSpace: "gateway-rl",
-    keyGenerator: (req: any) => String(req.apiKey?.id || req.ip || "anon"),
-    max: 1,
+    keyGenerator: (req) => req.ip,
+    max: maxPerMinute,
     timeWindow: "1 minute",
-    ban: 0,
     errorResponseBuilder: () => ({ error: "rate_limited", statusCode: 429 }),
-  });
-};
+  };
+}

@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
+    include: ["src/**/*.test.ts"],
     env: {
       DATABASE_URL: "postgres://gateway:gateway@localhost:5432/gateway",
       REDIS_URL: "redis://localhost:6379",

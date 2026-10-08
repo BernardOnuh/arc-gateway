@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { buildApp } from "./server.js";
 import { db } from "./db/index.js";
-import { apiKeys } from "./db/schema.js";
+import { apiKeys, partners } from "./db/schema.js";
 import { generateApiKey } from "./auth/apiKey.js";
 import { eq } from "drizzle-orm";
 import { computeFee } from "./fees.js";
@@ -10,6 +10,7 @@ describe("full flow: quotes, intents, fees, auth", () => {
   let app: any;
   let aliceKey: string;
   let bobKey: string;
+  let limitedKey: string;
 
   beforeAll(async () => {
     app = await buildApp();
@@ -31,36 +32,47 @@ describe("full flow: quotes, intents, fees, auth", () => {
       rateLimitPerMin: 50,
       active: true,
     });
+    const k3 = generateApiKey();
+    await db.insert(apiKeys).values({
+      partnerName: "limited",
+      keyPrefix: k3.keyPrefix,
+      keyHash: k3.keyHash,
+      feeBps: 10,
+      rateLimitPerMin: 3,
+      active: true,
+    });
     aliceKey = k1.rawKey;
     bobKey = k2.rawKey;
+    limitedKey = k3.rawKey;
   });
 
   afterAll(async () => {
     if (app) await app.close();
     await db.delete(apiKeys).where(eq(apiKeys.partnerName, "alice"));
     await db.delete(apiKeys).where(eq(apiKeys.partnerName, "bob"));
+    await db.delete(apiKeys).where(eq(apiKeys.partnerName, "limited"));
   });
 
   describe("computeFee", () => {
     it("basic", () => {
-      const { fee, netAmount } = computeFee(10000n, 10);
+      const { fee, netAmount } = computeFee(1000000n, 10);
       expect(fee).toBe(1000n);
-      expect(netAmount).toBe(9000n);
+      expect(netAmount).toBe(999000n);
     });
     it("zero bps", () => {
       const { fee, netAmount } = computeFee(10000n, 0);
       expect(fee).toBe(0n);
       expect(netAmount).toBe(10000n);
     });
-    it("100 bps", () => {
+    it("100 bps is 1%", () => {
       const { fee, netAmount } = computeFee(10000n, 100);
-      expect(fee).toBe(10000n);
-      expect(netAmount).toBe(0n);
+      expect(fee).toBe(100n);
+      expect(netAmount).toBe(9900n);
     });
     it("rounds down", () => {
       const { fee, netAmount } = computeFee(101n, 10);
-      expect(fee).toBe(10n);
-      expect(netAmount).toBe(91n);
+      expect(fee).toBe(0n);
+      expect(netAmount).toBe(101n);
     });
     it("throws if feeBps out of range", () => {
       expect(() => computeFee(100n, -1)).toThrow();
@@ -74,14 +86,14 @@ describe("full flow: quotes, intents, fees, auth", () => {
   describe("quotes", () => {
     it("alice can create a quote", async () => {
       const body = {
-        originChainId: 5042002,
+        originChainId: 1,
         destChainId: 5042002,
-        tokenIn: "0xtokenin",
-        tokenOut: "0xtokenout",
+        tokenIn: "WETH",
+        tokenOut: "USDC",
         amountIn: "1000000000000000000", // 1 ETH in wei
         recipient: "0xrecipient",
         slippageBps: 5,
-        deadlineSeconds: Math.floor(Date.now() / 1000) + 3600,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const res = await app.inject({
@@ -95,9 +107,9 @@ describe("full flow: quotes, intents, fees, auth", () => {
       const data = res.json();
       expect(data.quoteId).toBeDefined();
       expect(data.amountIn).toBe(body.amountIn);
-      expect(data.feeAmount).toBeDefined();
+      expect(data.feeAmount).toBe("1000000000000000");
       expect(data.feeBps).toBe(10);
-      expect(data.netAmount).toBeDefined();
+      expect(data.netAmount).toBe("999000000000000000");
       expect(data.estimatedOut).toBeDefined();
       expect(data.minOut).toBeDefined();
       expect(data.expiresAt).toBeDefined();
@@ -106,14 +118,14 @@ describe("full flow: quotes, intents, fees, auth", () => {
 
     it("rejects zero amount", async () => {
       const body = {
-        originChainId: 5042002,
+        originChainId: 1,
         destChainId: 5042002,
-        tokenIn: "0xtokenin",
-        tokenOut: "0xtokenout",
+        tokenIn: "WETH",
+        tokenOut: "USDC",
         amountIn: "0",
         recipient: "0xrecipient",
         slippageBps: 5,
-        deadlineSeconds: Math.floor(Date.now() / 1000) + 3600,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const res = await app.inject({
@@ -128,14 +140,14 @@ describe("full flow: quotes, intents, fees, auth", () => {
     it("rejects another partner's quote", async () => {
       // bob tries alice's workflow - should still work since it's per-key, but fee differs
       const body = {
-        originChainId: 5042002,
+        originChainId: 1,
         destChainId: 5042002,
-        tokenIn: "0xtokenin",
-        tokenOut: "0xtokenout",
+        tokenIn: "WETH",
+        tokenOut: "USDC",
         amountIn: "1000000000000000000",
         recipient: "0xrecipient",
         slippageBps: 5,
-        deadlineSeconds: Math.floor(Date.now() / 1000) + 3600,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const res = await app.inject({
@@ -152,12 +164,12 @@ describe("full flow: quotes, intents, fees, auth", () => {
       const body = {
         originChainId: 137, // polygon, not supported in our mock setup
         destChainId: 5042002,
-        tokenIn: "0xtokenin",
-        tokenOut: "0xtokenout",
+        tokenIn: "WETH",
+        tokenOut: "USDC",
         amountIn: "1000000000000000000",
         recipient: "0xrecipient",
         slippageBps: 5,
-        deadlineSeconds: Math.floor(Date.now() / 1000) + 3600,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const res = await app.inject({
@@ -166,20 +178,84 @@ describe("full flow: quotes, intents, fees, auth", () => {
         headers: { authorization: `Bearer ${aliceKey}` },
         body: body,
       });
-      // mock accepts any chain, so this should succeed
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe("unsupported chain");
+    });
+
+    it("rejects same-chain quote (must be cross-chain)", async () => {
+      const body = {
+        originChainId: 5042002,
+        destChainId: 5042002,
+        tokenIn: "WETH",
+        tokenOut: "USDC",
+        amountIn: "1000000000000000000",
+        recipient: "0xrecipient",
+        slippageBps: 5,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+      };
+
+      const res = await app.inject({
+        method: "POST",
+        url: "/v1/quotes",
+        headers: { authorization: `Bearer ${aliceKey}` },
+        body: body,
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe("origin and destination must be different chains");
+    });
+
+    it("rejects unknown token", async () => {
+      const body = {
+        originChainId: 1,
+        destChainId: 5042002,
+        tokenIn: "NOTATOKEN",
+        tokenOut: "USDC",
+        amountIn: "1000000000000000000",
+        recipient: "0xrecipient",
+        slippageBps: 5,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+      };
+
+      const res = await app.inject({
+        method: "POST",
+        url: "/v1/quotes",
+        headers: { authorization: `Bearer ${aliceKey}` },
+        body: body,
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toContain("tokenIn not supported");
+    });
+
+    it("lists real chains and tokens", async () => {
+      const chains = await app.inject({ method: "GET", url: "/v1/chains" });
+      expect(chains.statusCode).toBe(200);
+      const chainData = chains.json();
+      expect(chainData.length).toBeGreaterThanOrEqual(5);
+      const arcMainnet = chainData.find((c: any) => c.isArc && !c.testnet);
+      const arcTestnet = chainData.find((c: any) => c.isArc && c.testnet);
+      expect(arcMainnet.id).toBe(5042);
+      expect(arcTestnet.id).toBe(5042002);
+
+      const tokens = await app.inject({ method: "GET", url: "/v1/tokens?chainId=1" });
+      expect(tokens.statusCode).toBe(200);
+      const tokenData = tokens.json();
+      expect(tokenData.some((t: any) => t.symbol === "WETH")).toBe(true);
+      expect(tokenData.find((t: any) => t.symbol === "WETH").decimals).toBe(18);
+
+      const all = await app.inject({ method: "GET", url: "/v1/tokens" });
+      expect(all.json().length).toBeGreaterThan(10);
     });
 
     it("rejects deadline in the past", async () => {
       const body = {
-        originChainId: 5042002,
+        originChainId: 1,
         destChainId: 5042002,
-        tokenIn: "0xtokenin",
-        tokenOut: "0xtokenout",
+        tokenIn: "WETH",
+        tokenOut: "USDC",
         amountIn: "1000000000000000000",
         recipient: "0xrecipient",
         slippageBps: 5,
-        deadlineSeconds: Math.floor(Date.now() / 1000) - 100,
+        deadline: Math.floor(Date.now() / 1000) - 100,
       };
 
       const res = await app.inject({
@@ -193,14 +269,14 @@ describe("full flow: quotes, intents, fees, auth", () => {
 
     it("rejects slippage above max", async () => {
       const body = {
-        originChainId: 5042002,
+        originChainId: 1,
         destChainId: 5042002,
-        tokenIn: "0xtokenin",
-        tokenOut: "0xtokenout",
+        tokenIn: "WETH",
+        tokenOut: "USDC",
         amountIn: "1000000000000000000",
         recipient: "0xrecipient",
         slippageBps: 101, // above max of 100
-        deadlineSeconds: Math.floor(Date.now() / 1000) + 3600,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const res = await app.inject({
@@ -219,14 +295,14 @@ describe("full flow: quotes, intents, fees, auth", () => {
     beforeEach(async () => {
       // Create a quote for alice first
       const body = {
-        originChainId: 5042002,
+        originChainId: 1,
         destChainId: 5042002,
-        tokenIn: "0xtokenin",
-        tokenOut: "0xtokenout",
+        tokenIn: "WETH",
+        tokenOut: "USDC",
         amountIn: "1000000000000000000",
         recipient: "0xrecipient",
         slippageBps: 5,
-        deadlineSeconds: Math.floor(Date.now() / 1000) + 3600,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const res = await app.inject({
@@ -337,14 +413,14 @@ describe("full flow: quotes, intents, fees, auth", () => {
 
     beforeEach(async () => {
       const body = {
-        originChainId: 5042002,
+        originChainId: 1,
         destChainId: 5042002,
-        tokenIn: "0xtokenin",
-        tokenOut: "0xtokenout",
+        tokenIn: "WETH",
+        tokenOut: "USDC",
         amountIn: "1000000000000000000",
         recipient: "0xrecipient",
         slippageBps: 5,
-        deadlineSeconds: Math.floor(Date.now() / 1000) + 3600,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
       };
 
       const quoteRes = await app.inject({
@@ -365,33 +441,313 @@ describe("full flow: quotes, intents, fees, auth", () => {
       aliceIntentId = submitRes.json().intentId;
     });
 
-    it("returns intent status", async () => {
+    it("returns intent status with origin tx on first poll", async () => {
       const res = await app.inject({
         method: "GET",
         url: `/v1/intents/${aliceIntentId}`,
         headers: { authorization: `Bearer ${aliceKey}` },
       });
       expect(res.statusCode).toBe(200);
-      expect(res.json().status).toBe("PENDING");
+      expect(res.json().status).toBe("ORIGIN_CONFIRMED");
+      expect(res.json().originTx).toMatch(/^0x[0-9a-f]{64}$/);
     });
 
-    it("status advances on successive getStatus calls via mock", async () => {
-      // First call: PENDING
+    it("advances to FILLED with a destination tx on ARC", async () => {
+      // First call: origin confirmed on the source chain
       const r1 = await app.inject({
         method: "GET",
         url: `/v1/intents/${aliceIntentId}`,
         headers: { authorization: `Bearer ${aliceKey}` },
       });
-      expect(r1.json().status).toBe("PENDING");
+      expect(r1.json().status).toBe("ORIGIN_CONFIRMED");
+      expect(r1.json().originTx).toMatch(/^0x[0-9a-f]{64}$/);
+      expect(r1.json().destTx).toBeNull();
 
-      // Second call should advance to ORIGIN_CONFIRMED via mock
+      // Second call: filled on the destination (ARC) chain
       const r2 = await app.inject({
         method: "GET",
         url: `/v1/intents/${aliceIntentId}`,
         headers: { authorization: `Bearer ${aliceKey}` },
       });
-      // Mock advances PENDING -> ORIGIN_CONFIRMED on each call
-      expect(r2.json().status).toBe("ORIGIN_CONFIRMED");
+      expect(r2.json().status).toBe("FILLED");
+      expect(r2.json().originTx).toMatch(/^0x[0-9a-f]{64}$/);
+      expect(r2.json().destTx).toMatch(/^0x[0-9a-f]{64}$/);
     });
+  });
+
+  describe("endpoint discovery", () => {
+    it("root returns an endpoint index", async () => {
+      const res = await app.inject({ method: "GET", url: "/" });
+      expect(res.statusCode).toBe(200);
+      const data = res.json();
+      expect(data.docs).toBe("/docs");
+      expect(data.openapi).toBe("/openapi.json");
+      const paths = data.endpoints.map((e: any) => e.path);
+      expect(paths).toContain("/v1/quotes");
+      expect(paths).toContain("/v1/intents/submit");
+      expect(paths).toContain("/v1/intents/:id");
+      expect(data.endpoints.some((e: any) => e.auth)).toBe(true);
+    });
+
+    it("openapi.json describes the API", async () => {
+      const res = await app.inject({ method: "GET", url: "/openapi.json" });
+      expect(res.statusCode).toBe(200);
+      const spec = res.json();
+      expect(spec.openapi).toBe("3.0.3");
+      expect(Object.keys(spec.paths)).toContain("/v1/quotes");
+      expect(spec.components.securitySchemes.bearerAuth).toBeDefined();
+    });
+
+    it("docs UI is served", async () => {
+      const res = await app.inject({ method: "GET", url: "/docs/" });
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toContain("Swagger UI");
+    });
+  });
+
+  describe("per-partner rate limit", () => {
+    it("429s after rateLimitPerMin is exceeded", async () => {
+      const results = [];
+      for (let i = 0; i < 4; i++) {
+        const res = await app.inject({
+          method: "GET",
+          url: "/protected",
+          headers: { authorization: `Bearer ${limitedKey}` },
+        });
+        results.push(res.statusCode);
+      }
+      expect(results.slice(0, 3)).toEqual([200, 200, 200]);
+      expect(results[3]).toBe(429);
+    });
+  });
+});
+
+describe("partner onboarding, customers and ledger", () => {
+  let app: any;
+  let partnerKey: string;
+  let partnerId: string;
+  let customerId: string;
+  let legacyKey: string;
+  const email = `partner-${Date.now()}@test.local`;
+  const email2 = `partner2-${Date.now()}@test.local`;
+
+  beforeAll(async () => {
+    app = await buildApp();
+    const legacy = generateApiKey();
+    await db.insert(apiKeys).values({
+      partnerName: "legacy-no-partner",
+      keyPrefix: legacy.keyPrefix,
+      keyHash: legacy.keyHash,
+      feeBps: 10,
+      rateLimitPerMin: 100,
+      active: true,
+    });
+    legacyKey = legacy.rawKey;
+  });
+
+  afterAll(async () => {
+    if (app) await app.close();
+    await db.delete(partners).where(eq(partners.email, email));
+    await db.delete(partners).where(eq(partners.email, email2));
+    await db.delete(apiKeys).where(eq(apiKeys.partnerName, "legacy-no-partner"));
+  });
+
+  const quoteBody = (overrides: Record<string, unknown> = {}) => ({
+    originChainId: 1,
+    destChainId: 5042002,
+    tokenIn: "WETH",
+    tokenOut: "USDC",
+    amountIn: "1000000000000000000",
+    recipient: "0xrecipient",
+    slippageBps: 5,
+    deadline: Math.floor(Date.now() / 1000) + 3600,
+    ...overrides,
+  });
+
+  it("registers a business and returns a one-time api key", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/partners",
+      body: { partnerName: "Acme Pay", email },
+    });
+    expect(res.statusCode).toBe(201);
+    const data = res.json();
+    expect(data.partnerId).toBeDefined();
+    expect(data.apiKey).toMatch(/^gw_live_/);
+    expect(data.keyPrefix).toBe(data.apiKey.slice(0, 8));
+    expect(data.feeBps).toBe(10);
+    expect(data.rateLimitPerMin).toBe(30);
+    partnerKey = data.apiKey;
+    partnerId = data.partnerId;
+  });
+
+  it("rejects duplicate email with 409", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/partners",
+      body: { partnerName: "Acme Dupe", email },
+    });
+    expect(res.statusCode).toBe(409);
+  });
+
+  it("rejects an invalid signup body", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/partners",
+      body: { partnerName: "" },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("registers an end customer", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/customers",
+      headers: { authorization: `Bearer ${partnerKey}` },
+      body: { externalId: "user_1234", recipientAddress: "0x0000000000000000000000000000000000000001" },
+    });
+    expect(res.statusCode).toBe(201);
+    const data = res.json();
+    expect(data.customerId).toBeDefined();
+    expect(data.externalId).toBe("user_1234");
+    customerId = data.customerId;
+  });
+
+  it("is idempotent per externalId", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/customers",
+      headers: { authorization: `Bearer ${partnerKey}` },
+      body: { externalId: "user_1234", recipientAddress: "0x0000000000000000000000000000000000000001" },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().customerId).toBe(customerId);
+  });
+
+  it("rejects an invalid recipient address", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/customers",
+      headers: { authorization: `Bearer ${partnerKey}` },
+      body: { externalId: "user_bad", recipientAddress: "0xnotanaddress" },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("legacy keys without a partner cannot manage customers", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/customers",
+      headers: { authorization: `Bearer ${legacyKey}` },
+      body: { externalId: "user_x", recipientAddress: "0x0000000000000000000000000000000000000002" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe("api key is not linked to a partner");
+  });
+
+  it("creates a quote attributed to the customer and reports it in the ledger", async () => {
+    const q = await app.inject({
+      method: "POST",
+      url: "/v1/quotes",
+      headers: { authorization: `Bearer ${partnerKey}` },
+      body: quoteBody({ customerId }),
+    });
+    expect(q.statusCode).toBe(200);
+    expect(q.json().feeAmount).toBe("1000000000000000");
+    expect(q.json().feeBps).toBe(10);
+
+    const ledger = await app.inject({
+      method: "GET",
+      url: "/v1/ledger",
+      headers: { authorization: `Bearer ${partnerKey}` },
+    });
+    expect(ledger.statusCode).toBe(200);
+    const data = ledger.json();
+    expect(data.partnerId).toBe(partnerId);
+    expect(data.totals.transactions).toBe(1);
+    expect(data.totals.amountInTotal).toBe("1000000000000000000");
+    expect(data.totals.feeTotal).toBe("1000000000000000");
+    expect(data.byCustomer).toHaveLength(1);
+    expect(data.byCustomer[0]).toMatchObject({
+      externalId: "user_1234",
+      recipientAddress: "0x0000000000000000000000000000000000000001",
+      transactions: 1,
+      feeTotal: "1000000000000000",
+    });
+
+    const filtered = await app.inject({
+      method: "GET",
+      url: `/v1/ledger?customerId=${customerId}`,
+      headers: { authorization: `Bearer ${partnerKey}` },
+    });
+    expect(filtered.statusCode).toBe(200);
+    expect(filtered.json().totals.feeTotal).toBe("1000000000000000");
+  });
+
+  it("rejects a quote attributed to another partner's customer", async () => {
+    const other = await app.inject({
+      method: "POST",
+      url: "/v1/partners",
+      body: { partnerName: "Another Co", email: email2 },
+    });
+    expect(other.statusCode).toBe(201);
+    const otherKey = other.json().apiKey;
+
+    const otherCustomer = await app.inject({
+      method: "POST",
+      url: "/v1/customers",
+      headers: { authorization: `Bearer ${otherKey}` },
+      body: { externalId: "their_user", recipientAddress: "0x0000000000000000000000000000000000000003" },
+    });
+    expect(otherCustomer.statusCode).toBe(201);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/quotes",
+      headers: { authorization: `Bearer ${partnerKey}` },
+      body: quoteBody({ customerId: otherCustomer.json().customerId }),
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe("customer not found for this partner");
+  });
+
+  it("rejects a customer-attributed quote from a legacy key", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/quotes",
+      headers: { authorization: `Bearer ${legacyKey}` },
+      body: quoteBody({ customerId }),
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe("api key is not linked to a partner");
+  });
+
+  it("rejects a ledger filter with a foreign customer id", async () => {
+    const foreign = await app.inject({
+      method: "POST",
+      url: "/v1/customers",
+      headers: { authorization: `Bearer ${legacyKey}` },
+      body: { externalId: "legacy_user", recipientAddress: "0x0000000000000000000000000000000000000004" },
+    });
+    // legacy key cannot create customers at all, so test the filter against a bogus id
+    expect(foreign.statusCode).toBe(400);
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/ledger?customerId=11111111-1111-4111-8111-111111111111`,
+      headers: { authorization: `Bearer ${partnerKey}` },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe("customer not found for this partner");
+  });
+
+  it("legacy keys cannot access the ledger", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/v1/ledger",
+      headers: { authorization: `Bearer ${legacyKey}` },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe("api key is not linked to a partner");
   });
 });

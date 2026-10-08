@@ -15,25 +15,35 @@
   "author": "",
   "license": "ISC",
   "type": "module",
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "bufferutil",
+      "utf-8-validate"
+    ]
+  },
   "dependencies": {
+    "@circle-fin/adapter-viem-v2": "^1.19.0",
+    "@circle-fin/app-kit": "^1.16.0",
     "@fastify/rate-limit": "^11.2.0",
     "@fastify/redis": "^9.0.0",
+    "@fastify/swagger": "^9.9.1",
+    "@fastify/swagger-ui": "^6.1.1",
     "@fastify/type-provider-typebox": "^6.1.0",
     "@types/node": "^26.6.4",
     "bullmq": "^6.3.11",
-    "crypto": "^1.0.1",
+    "dotenv": "^18.0.5",
     "drizzle-orm": "^0.45.3",
     "fastify": "^5.12.5",
     "ioredis": "^6.0.0",
     "pg": "^8.23.1",
     "pino": "^10.4.0",
     "uuid": "^14.0.2",
+    "viem": "^2.57.3",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",
     "@vitest/coverage-v8": "^5.0.3",
-    "dotenv": "^18.0.5",
     "drizzle-kit": "^0.31.11",
     "esbuild": "^0.28.2",
     "tsconfig-paths": "^4.2.0",

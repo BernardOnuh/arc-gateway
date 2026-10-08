@@ -6,7 +6,7 @@ export interface QuoteRequest {
   amountIn: string; // base units as string
   recipient: string;
   slippageBps: number;
-  deadlineSeconds: number;
+  deadline: number; // absolute unix seconds
 }
 
 export interface UpstreamQuote {
@@ -16,7 +16,8 @@ export interface UpstreamQuote {
   estimatedOut: string;
   minOut: string;
   expiresAt: number;
-  unsignedTx: string;
+  /** Unsigned origin transaction when the provider returns one (null until settlement wiring). */
+  unsignedTx: string | null;
   raw: Record<string, unknown>;
 }
 
@@ -29,9 +30,15 @@ export enum IntentStatus {
   FAILED = "FAILED",
 }
 
+export interface IntentStatusDetail {
+  status: IntentStatus;
+  originTx?: string | null;
+  destTx?: string | null;
+}
+
 export interface QuoteProvider {
   name: string;
   getQuote(req: QuoteRequest): Promise<UpstreamQuote>;
   submit(quote: UpstreamQuote, signedPayload: string): Promise<string>;
-  getStatus(upstreamId: string): Promise<IntentStatus>;
+  getStatus(upstreamId: string, quote?: UpstreamQuote): Promise<IntentStatusDetail>;
 }

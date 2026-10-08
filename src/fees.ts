@@ -5,7 +5,7 @@ export function computeFee(amountIn: bigint, feeBps: number): { fee: bigint; net
   if (amountIn <= 0n) {
     throw new Error("amountIn must be greater than 0");
   }
-  const fee = (amountIn * BigInt(feeBps)) / 100n;
+  const fee = (amountIn * BigInt(feeBps)) / 10000n;
   const netAmount = amountIn - fee;
   return { fee, netAmount };
 }
