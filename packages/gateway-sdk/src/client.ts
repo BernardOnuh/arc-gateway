@@ -40,7 +40,9 @@ export class GatewayClient {
 
   constructor(options: GatewayClientOptions = {}) {
     this.baseUrl = (options.baseUrl ?? "http://localhost:3000").replace(/\/+$/, "");
-    this.fetchImpl = options.fetchImpl ?? fetch;
+    // Wrap the global so it is never invoked with the client as `this`:
+    // browsers throw "Illegal invocation" for a detached window.fetch.
+    this.fetchImpl = options.fetchImpl ?? ((input, init) => fetch(input, init));
     this.apiKey = options.apiKey;
   }
 

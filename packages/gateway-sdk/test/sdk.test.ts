@@ -122,4 +122,19 @@ describe("GatewayClient", () => {
     expect(calls[0].url).toBe("http://gw.test/v1/partners/me");
     expect(calls[0].init.headers["authorization"]).toBe("Bearer gw_live_testkey");
   });
+
+  it("default fetch is called without the client bound as this", async () => {
+    const original = globalThis.fetch;
+    let receiver: unknown = "unset";
+    globalThis.fetch = function (this: unknown) {
+      receiver = this;
+      return Promise.resolve({ ok: true, status: 200, text: async () => "[]" } as Response);
+    } as typeof fetch;
+    try {
+      await new GatewayClient({ baseUrl: "http://gw.test" }).chains();
+    } finally {
+      globalThis.fetch = original;
+    }
+    expect(receiver).not.toBeInstanceOf(GatewayClient);
+  });
 });
