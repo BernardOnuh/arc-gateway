@@ -221,6 +221,43 @@ async function main() {
   });
   summary("CORS preflight allows dashboard origin", corsRes.status === 204 && corsRes.headers.get("access-control-allow-origin") === "http://localhost:5173", `${corsRes.status}, allow-origin=${corsRes.headers.get("access-control-allow-origin")}`);
 
+  // 5c. API keys: publishable keys, revoke, rotate
+  const SHOP = "https://shop.example.com";
+  const pkRes = await fetch(`${BASE}/v1/partners/me/api-keys/publishable`, {
+    method: "POST",
+    headers: { ...pAuth, "content-type": "application/json" },
+    body: JSON.stringify({ allowedOrigins: [SHOP] }),
+  });
+  const pkBody = (await json(pkRes)) as any;
+  summary("POST /v1/partners/me/api-keys/publishable", pkRes.status === 201 && /^pk_live_/.test(pkBody.publishableKey ?? "") && S(pkBody.allowedOrigins) === S([SHOP]), `${pkRes.status}, kind=${S(pkBody.kind)} origins=${S(pkBody.allowedOrigins)}`);
+  const pkAuth = { authorization: `Bearer ${pkBody.publishableKey}` };
+  const widgetQuoteBody = JSON.stringify({ originChainId: 1, destChainId: ARC_ID, tokenIn: "WETH", tokenOut: "USDC", amountIn: "1000000000000000000", recipient: "0x1111111111111111111111111111111111111111", slippageBps: 50, deadline });
+  const pkQuote = await fetch(`${BASE}/v1/quotes`, { method: "POST", headers: { ...pkAuth, origin: SHOP, "content-type": "application/json" }, body: widgetQuoteBody });
+  const pkQuoteBody = (await json(pkQuote)) as any;
+  summary("publishable key quotes from an allowed origin", pkQuote.status === 200 && pkQuoteBody.feeBps === 10, `${pkQuote.status}`);
+  const pkEvil = await fetch(`${BASE}/v1/quotes`, { method: "POST", headers: { ...pkAuth, origin: "https://evil.example", "content-type": "application/json" }, body: widgetQuoteBody });
+  summary("publishable key rejected from other origins", pkEvil.status === 403, `${pkEvil.status} ${S(await json(pkEvil))}`);
+  // Blocked before any upstream call, so safe with QUOTE_PROVIDER=arc too.
+  const pkSubmit = await fetch(`${BASE}/v1/intents/submit`, { method: "POST", headers: { ...pkAuth, origin: SHOP, "content-type": "application/json" }, body: JSON.stringify({ quoteId: pkQuoteBody.quoteId, signedPayload: "0x" }) });
+  summary("publishable key cannot submit intents", pkSubmit.status === 403, `${pkSubmit.status}`);
+  const pkLedger = await fetch(`${BASE}/v1/ledger`, { headers: { ...pkAuth, origin: SHOP } });
+  summary("publishable key cannot read the ledger", pkLedger.status === 403, `${pkLedger.status}`);
+  const widgetPreflight = await fetch(`${BASE}/v1/quotes`, { method: "OPTIONS", headers: { origin: SHOP, "access-control-request-method": "POST", "access-control-request-headers": "authorization,content-type" } });
+  summary("CORS preflight allows any origin on widget routes", widgetPreflight.status === 204 && widgetPreflight.headers.get("access-control-allow-origin") === SHOP, `${widgetPreflight.status}, allow-origin=${widgetPreflight.headers.get("access-control-allow-origin")}`);
+  const sharedList = (await json(await fetch(`${BASE}/v1/quotes`, { headers: pAuth }))) as any;
+  summary("widget quotes appear in the partner's quote list", sharedList.items?.some((x: any) => x.quoteId === pkQuoteBody.quoteId), `total=${S(sharedList.total)}`);
+  const keysRes = await fetch(`${BASE}/v1/partners/me/api-keys`, { headers: pAuth });
+  const keysBody = (await json(keysRes)) as any;
+  summary("GET /v1/partners/me/api-keys hides the secret", keysRes.status === 200 && keysBody.items?.length === 2 && !JSON.stringify(keysBody).includes(signupBody.apiKey), `${keysRes.status}, ${keysBody.items?.length} keys`);
+  const revokeRes = await fetch(`${BASE}/v1/partners/me/api-keys/revoke`, { method: "POST", headers: { ...pAuth, "content-type": "application/json" }, body: JSON.stringify({ keyId: pkBody.id }) });
+  const pkAfter = await fetch(`${BASE}/v1/quotes`, { method: "POST", headers: { ...pkAuth, origin: SHOP, "content-type": "application/json" }, body: widgetQuoteBody });
+  summary("revoked publishable key stops working", revokeRes.status === 200 && pkAfter.status === 401, `revoke ${revokeRes.status}, then quote ${pkAfter.status}`);
+  const rotateRes = await fetch(`${BASE}/v1/partners/me/api-keys/rotate`, { method: "POST", headers: pAuth });
+  const rotateBody = (await json(rotateRes)) as any;
+  const oldAfter = await fetch(`${BASE}/v1/partners/me`, { headers: pAuth });
+  const newLedger = (await json(await fetch(`${BASE}/v1/ledger`, { headers: { authorization: `Bearer ${rotateBody.apiKey}` } }))) as any;
+  summary("rotate issues a new key, revokes the old, keeps history", rotateRes.status === 201 && oldAfter.status === 401 && newLedger.totals?.transactions === ledger.totals.transactions + 1, `rotate ${rotateRes.status}, old key ${oldAfter.status}, ledger tx ${S(newLedger.totals?.transactions)}`);
+
   // 6. submit + poll end-to-end
   const sample = await fetch(`${BASE}/v1/quotes`, {
     method: "POST",
@@ -354,6 +391,14 @@ async function main() {
   lines.push(`Lists return \`{ items, total, limit, offset }\`, newest first (default limit 50, max 200). CORS preflight from \`http://localhost:5173\` → \`${corsRes.status}\`.`);
   lines.push(``);
 
+  lines.push(`### API keys and the widget`);
+  lines.push(``);
+  lines.push(`Publishable key created: \`${pkRes.status}\` (\`pk_live_…\`, origins \`${S(pkBody.allowedOrigins)}\`).  `);
+  lines.push(`Quote with the publishable key from \`${SHOP}\` → \`${pkQuote.status}\`; from another origin → \`${pkEvil.status}\`; submit intent → \`${pkSubmit.status}\`; ledger → \`${pkLedger.status}\`.  `);
+  lines.push(`Widget-route preflight from \`${SHOP}\` → \`${widgetPreflight.status}\`. Revoke → \`${revokeRes.status}\`, then the key gets \`${pkAfter.status}\`.  `);
+  lines.push(`Rotate → \`${rotateRes.status}\`; old key → \`${oldAfter.status}\`; the new key sees the same ledger (\`${S(newLedger.totals?.transactions)}\` transactions).`);
+  lines.push(``);
+
   lines.push(`## 6. Intent lifecycle with real addresses (\`POST /v1/intents/submit\` + polling)`);
   lines.push(``);
   lines.push(`Submitted quote \`${q.quoteId}\` (WETH → Arc USDC, 1e18 in).  `);
@@ -376,7 +421,8 @@ async function main() {
   lines.push(`6. **Arc decimals caveat:** chain-level native gas reports 18 decimals while the USDC ERC-20 interface reports 6. Quotes use the 6-decimal token amount.`);
   lines.push(`7. **Still simulated:** the actual fill price, the origin-chain relay transaction, and Arc settlement. Real \`estimatedOut\`/\`minOut\` require a real quote/solver source; \`unsignedTx\` and submitted intents are placeholders.`);
   lines.push(`8. **Business self-serve:** \`POST /v1/partners\` provisions a business (api key shown once, \`feeBps=10\` default). Customers registered per business expect \`customerId\` on quotes; \`GET /v1/ledger\` reports fees earned, per customer. Legacy keys (no partner) keep working for quotes but cannot use customers/ledger.`);
-  lines.push(`9. **Dashboard reads:** \`GET /v1/customers\`, \`GET /v1/quotes\`, \`GET /v1/intents\` and \`GET /v1/partners/me\` back the partner dashboard. Quote/intent lists are scoped to the calling API key (same as the ledger) and return stored status without polling upstream. Browser access is governed by \`CORS_ORIGINS\`.`);
+  lines.push(`9. **Dashboard reads:** \`GET /v1/customers\`, \`GET /v1/quotes\`, \`GET /v1/intents\` and \`GET /v1/partners/me\` back the partner dashboard. Quotes, intents and the ledger are scoped to the partner across all of its keys (legacy keys without a partner see only their own rows) and lists return stored status without polling upstream. Dashboard routes follow \`CORS_ORIGINS\`.`);
+  lines.push(`10. **Publishable keys:** \`pk_live_\` keys can only create quotes and read intent status, only from their allowed origins. They cannot submit intents, because submitting spends gateway funds; partners submit from their server with the secret key. Rotation revokes the old secret key atomically and keeps all history.`);
 
   writeFileSync("reports/ENDPOINT_TEST_REPORT.md", lines.join("\n"));
   console.log(`Wrote reports/ENDPOINT_TEST_REPORT.md — ${passed}/${results.length} passed`);

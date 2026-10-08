@@ -74,6 +74,7 @@ export async function partnerRoutes(app: FastifyInstance) {
         partnerName,
         keyPrefix: key.keyPrefix,
         keyHash: key.keyHash,
+        last4: key.last4,
         feeBps,
         rateLimitPerMin,
         active: true,

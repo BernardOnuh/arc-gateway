@@ -88,3 +88,26 @@ export function useCatalog(): Catalog {
     },
   };
 }
+
+export function useApiKeys() {
+  const { client, apiKey } = useGateway();
+  return useQuery({ queryKey: ["api-keys", apiKey], queryFn: () => client.listApiKeys() });
+}
+
+export function useCreatePublishableKey() {
+  const { client, apiKey } = useGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (allowedOrigins: string[]) => client.createPublishableKey({ allowedOrigins }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["api-keys", apiKey] }),
+  });
+}
+
+export function useRevokeApiKey() {
+  const { client, apiKey } = useGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (keyId: string) => client.revokeApiKey(keyId),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["api-keys", apiKey] }),
+  });
+}

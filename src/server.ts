@@ -10,6 +10,7 @@ import { globalRateLimitOptions } from "./auth/rateLimit.js";
 import { metaRoutes, type EndpointInfo } from "./routes/meta.js";
 import { catalogRoutes } from "./routes/catalog.js";
 import { partnerRoutes } from "./routes/partners.js";
+import { apiKeyRoutes } from "./routes/apiKeys.js";
 import { customerRoutes } from "./routes/customers.js";
 import { ledgerRoutes } from "./routes/ledger.js";
 import { quoteRoutes } from "./routes/quotes.js";
@@ -23,6 +24,14 @@ function isAuthRoute(route: RouteOptions): boolean {
     return list.includes(requireApiKey as unknown);
   };
   return has(route.onRequest) || has(route.preHandler);
+}
+
+/** Routes the browser widget calls from partner sites (see config.publishable on the routes). */
+export function isWidgetRoute(method: string, url: string): boolean {
+  const path = url.split("?")[0];
+  if (method === "GET" && (path === "/v1/chains" || path === "/v1/tokens")) return true;
+  if (method === "POST" && path === "/v1/quotes") return true;
+  return method === "GET" && /^\/v1\/intents\/[^/]+$/.test(path);
 }
 
 export async function buildApp() {
@@ -74,11 +83,21 @@ export async function buildApp() {
   });
   await app.register(swaggerUi, { routePrefix: "/docs" });
 
+  const dashboardOrigins = config.corsOrigins.includes("*") ? true : config.corsOrigins;
   await app.register(cors, {
-    origin: config.corsOrigins.includes("*") ? true : config.corsOrigins,
-    methods: ["GET", "POST"],
-    allowedHeaders: ["authorization", "content-type"],
-    maxAge: 600,
+    // Widget routes answer any origin at the CORS layer; publishable keys then
+    // enforce their own per-key origin allowlist (auth/apiKey.ts). Everything
+    // else is limited to CORS_ORIGINS (the dashboard).
+    delegator: (req, cb) => {
+      const method =
+        req.method === "OPTIONS" ? String(req.headers["access-control-request-method"] ?? "") : req.method;
+      cb(null, {
+        origin: isWidgetRoute(method, req.url ?? "") ? true : dashboardOrigins,
+        methods: ["GET", "POST"],
+        allowedHeaders: ["authorization", "content-type"],
+        maxAge: 600,
+      });
+    },
   });
 
   await app.register(rateLimit, globalRateLimitOptions(redis));
@@ -88,6 +107,7 @@ export async function buildApp() {
   await metaRoutes(app, { endpoints, redis });
   await catalogRoutes(app);
   await partnerRoutes(app);
+  await apiKeyRoutes(app);
   await customerRoutes(app);
   await ledgerRoutes(app);
   await quoteRoutes(app);

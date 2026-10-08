@@ -1,3 +1,4 @@
+import { PublishableKeysCard, SecretKeyCard } from "../../components/dashboard/ApiKeys";
 import { Card, ErrorState, Loading, PageTitle } from "../../components/dashboard/ui";
 import { formatBps, formatDate } from "../../lib/format";
 import { usePartnerProfile } from "../../lib/queries";
@@ -38,17 +39,8 @@ export function Settings() {
             </dl>
           </Card>
 
-          <Card title="API key">
-            <dl className="grid grid-cols-[10rem_1fr] gap-y-2 text-sm">
-              <dt className="text-slate-500">Secret key</dt>
-              <dd className="font-mono">{profile.data.apiKey.keyPrefix}••••••••</dd>
-              <dt className="text-slate-500">Created</dt>
-              <dd>{formatDate(profile.data.apiKey.createdAt)}</dd>
-            </dl>
-            <p className="mt-4 text-sm text-slate-500">
-              We store only a hash of your key, so it can't be shown again. If it leaks, rotate it.
-            </p>
-          </Card>
+          <SecretKeyCard />
+          <PublishableKeysCard />
 
           <Card title="Customer payouts">
             <p className="text-sm text-slate-600">

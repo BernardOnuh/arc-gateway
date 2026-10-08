@@ -196,3 +196,30 @@ export interface PartnerProfile {
   createdAt: string;
   apiKey: { id: string; keyPrefix: string; createdAt: string };
 }
+
+export type ApiKeyKind = "secret" | "publishable";
+
+export interface ApiKeySummary {
+  id: string;
+  kind: ApiKeyKind;
+  keyPrefix: string;
+  last4: string | null;
+  /** Full publishable key (public by design); always null for secret keys. */
+  publishableKey: string | null;
+  allowedOrigins: string[] | null;
+  active: boolean;
+  /** True for the key that made the request. */
+  current: boolean;
+  createdAt: string;
+  revokedAt: string | null;
+}
+
+export interface RotateApiKeyResult {
+  /** The new secret key, shown once. The calling key is already revoked. */
+  apiKey: string;
+  key: ApiKeySummary;
+}
+
+export interface CreatePublishableKeyParams {
+  allowedOrigins: string[];
+}

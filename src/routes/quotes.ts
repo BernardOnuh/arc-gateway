@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { eq, and, desc, count, type SQL } from "drizzle-orm";
 import { isSupportedChain } from "../chains.js";
 import { resolveToken } from "../tokens.js";
-import { requireApiKey } from "../auth/apiKey.js";
+import { ownedByCaller, requireApiKey } from "../auth/apiKey.js";
 import { db } from "../db/index.js";
 import { apiKeys, quotes, customers, intents } from "../db/schema.js";
 import { computeFee } from "../fees.js";
@@ -24,11 +24,12 @@ export async function quoteRoutes(app: FastifyInstance) {
     "/v1/quotes",
     {
       onRequest: requireApiKey,
+      config: { publishable: true },
       schema: {
         tags: ["quotes"],
         summary: "Create a quote",
         description:
-          "Resolves tokenIn/tokenOut on their chains (symbol like WETH/USDC or a real ERC-20 address from GET /v1/tokens), applies the partner fee (api_keys.fee_bps) to the full amountIn, and requests the upstream quote on the net amount. With QUOTE_PROVIDER=arc, prices come live from the Circle Swap solver (no liquidity -> HTTP 400 with the solver's reason). Optional customerId attributes the transaction to a registered end customer for the /v1/ledger revenue report.",
+          "Resolves tokenIn/tokenOut on their chains (symbol like WETH/USDC or a real ERC-20 address from GET /v1/tokens), applies the partner fee (api_keys.fee_bps) to the full amountIn, and requests the upstream quote on the net amount. With QUOTE_PROVIDER=arc, prices come live from the Circle Swap solver (no liquidity -> HTTP 400 with the solver's reason). Optional customerId attributes the transaction to a registered end customer for the /v1/ledger revenue report. Accepts a secret key or a publishable key (pk_live_, from one of its allowed Origins), so the browser widget can quote directly.",
         security: [{ bearerAuth: [] }],
         body: {
           ...toJsonSchema(quoteBodySchema),
@@ -179,7 +180,7 @@ export async function quoteRoutes(app: FastifyInstance) {
         tags: ["quotes"],
         summary: "List quotes",
         description:
-          "Lists quotes created with this API key, newest first, each with its submitted intent (if any). Filter with ?customerId=; paginate with ?limit=&offset=. Intent status is the last stored value; poll GET /v1/intents/:id for a live refresh.",
+          "Lists quotes created with any of this partner's API keys (secret or publishable, including rotated-out keys), newest first, each with its submitted intent (if any). Filter with ?customerId=; paginate with ?limit=&offset=. Intent status is the last stored value; poll GET /v1/intents/:id for a live refresh.",
         security: [{ bearerAuth: [] }],
         querystring: toJsonSchema(quoteListQuerySchema),
         response: {
@@ -197,7 +198,7 @@ export async function quoteRoutes(app: FastifyInstance) {
       const { limit, offset, customerId } = parsed.data;
       const key = request.apiKey!;
 
-      const filters: SQL[] = [eq(quotes.apiKeyId, key.id)];
+      const filters: SQL[] = [ownedByCaller(quotes.apiKeyId, key)];
       if (customerId) filters.push(eq(quotes.customerId, customerId));
       const where = and(...filters);
 

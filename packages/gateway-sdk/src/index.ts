@@ -2,8 +2,11 @@ export { GatewayError } from "./errors.js";
 export { GatewayClient } from "./client.js";
 export type { GatewayClientOptions, PollOptions } from "./client.js";
 export type {
+  ApiKeyKind,
+  ApiKeySummary,
   ChainInfo,
   CreateCustomerParams,
+  CreatePublishableKeyParams,
   Customer,
   Intent,
   IntentListItem,
@@ -21,6 +24,7 @@ export type {
   QuoteParams,
   RegisterPartnerParams,
   RegisterPartnerResult,
+  RotateApiKeyResult,
   SubmitIntentParams,
   SubmitIntentResult,
   TokenInfo,

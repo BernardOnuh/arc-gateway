@@ -58,6 +58,14 @@ export const apiKeys = pgTable(
     feeBps: integer("fee_bps").notNull(),
     rateLimitPerMin: integer("rate_limit_per_min").notNull(),
     active: boolean("active").notNull().default(true),
+    /** "secret" (gw_live_, server-side) or "publishable" (pk_live_, browser widget). */
+    kind: text("kind").$type<"secret" | "publishable">().notNull().default("secret"),
+    /** Last 4 characters of the raw key, to tell keys apart in the dashboard. */
+    last4: text("last4"),
+    /** Publishable keys only: the raw key (it is public by design) and the browser origins allowed to use it. */
+    publicKey: text("public_key"),
+    allowedOrigins: jsonb("allowed_origins").$type<string[]>(),
+    revokedAt: timestamp("revoked_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => ({

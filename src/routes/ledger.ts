@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { requireApiKey } from "../auth/apiKey.js";
+import { ownedByCaller, requireApiKey } from "../auth/apiKey.js";
 import { db } from "../db/index.js";
 import { quotes, customers } from "../db/schema.js";
 import { resolveToken } from "../tokens.js";
@@ -16,7 +16,7 @@ export async function ledgerRoutes(app: FastifyInstance) {
         tags: ["ledger"],
         summary: "Partner revenue ledger",
         description:
-          "Sums fees earned (feeBps applied on each quote) for the authenticated business, broken down per customer. Optional ?customerId= filters to a single customer. Requires a key created via POST /v1/partners.",
+          "Sums fees earned (feeBps applied on each quote) across all of the business's API keys, broken down per token and per customer. Optional ?customerId= filters to a single customer. Requires a key created via POST /v1/partners.",
         security: [{ bearerAuth: [] }],
         querystring: toJsonSchema(
           z.object({ customerId: z.string().uuid().optional() })
@@ -43,7 +43,7 @@ export async function ledgerRoutes(app: FastifyInstance) {
           request: quotes.request,
         })
         .from(quotes)
-        .where(eq(quotes.apiKeyId, key.id));
+        .where(ownedByCaller(quotes.apiKeyId, key));
 
       if (customerId) {
         const owned = await db

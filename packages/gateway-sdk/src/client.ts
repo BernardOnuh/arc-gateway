@@ -1,6 +1,8 @@
 import { GatewayError } from "./errors.js";
 import type {
+  ApiKeySummary,
   ChainInfo,
+  CreatePublishableKeyParams,
   CreateCustomerParams,
   Customer,
   Intent,
@@ -15,6 +17,7 @@ import type {
   QuoteListItem,
   QuoteParams,
   RegisterPartnerParams,
+  RotateApiKeyResult,
   RegisterPartnerResult,
   SubmitIntentParams,
   SubmitIntentResult,
@@ -101,6 +104,23 @@ export class GatewayClient {
 
   me(apiKey?: string): Promise<PartnerProfile> {
     return this.request("GET", "/v1/partners/me", { apiKey });
+  }
+
+  listApiKeys(apiKey?: string): Promise<{ items: ApiKeySummary[] }> {
+    return this.request("GET", "/v1/partners/me/api-keys", { apiKey });
+  }
+
+  /** Issues a new secret key and revokes the one used for this call. */
+  rotateApiKey(apiKey?: string): Promise<RotateApiKeyResult> {
+    return this.request("POST", "/v1/partners/me/api-keys/rotate", { apiKey });
+  }
+
+  createPublishableKey(params: CreatePublishableKeyParams, apiKey?: string): Promise<ApiKeySummary> {
+    return this.request("POST", "/v1/partners/me/api-keys/publishable", { body: params, apiKey });
+  }
+
+  revokeApiKey(keyId: string, apiKey?: string): Promise<ApiKeySummary> {
+    return this.request("POST", "/v1/partners/me/api-keys/revoke", { body: { keyId }, apiKey });
   }
 
   createCustomer(params: CreateCustomerParams, apiKey?: string): Promise<Customer> {

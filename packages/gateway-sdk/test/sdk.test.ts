@@ -123,6 +123,23 @@ describe("GatewayClient", () => {
     expect(calls[0].init.headers["authorization"]).toBe("Bearer gw_live_testkey");
   });
 
+  it("key management hits the partner key routes with auth", async () => {
+    const { client, calls } = makeClient(ok({}));
+    await client.listApiKeys();
+    await client.rotateApiKey();
+    await client.createPublishableKey({ allowedOrigins: ["https://shop.example.com"] });
+    await client.revokeApiKey("k-1");
+    expect(calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([
+      "GET http://gw.test/v1/partners/me/api-keys",
+      "POST http://gw.test/v1/partners/me/api-keys/rotate",
+      "POST http://gw.test/v1/partners/me/api-keys/publishable",
+      "POST http://gw.test/v1/partners/me/api-keys/revoke",
+    ]);
+    expect(JSON.parse(calls[2].init.body!)).toEqual({ allowedOrigins: ["https://shop.example.com"] });
+    expect(JSON.parse(calls[3].init.body!)).toEqual({ keyId: "k-1" });
+    expect(calls.every((c) => c.init.headers!["authorization"] === "Bearer gw_live_testkey")).toBe(true);
+  });
+
   it("default fetch is called without the client bound as this", async () => {
     const original = globalThis.fetch;
     let receiver: unknown = "unset";

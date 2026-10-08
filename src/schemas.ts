@@ -290,6 +290,55 @@ export const partnerProfileResponseSchema = z.object({
   }),
 });
 
+// ----- API key management -----
+
+export const apiKeySummarySchema = z.object({
+  id: z.string(),
+  kind: z.enum(["secret", "publishable"]),
+  keyPrefix: z.string().describe("gw_live_ (secret) or pk_live_ (publishable)."),
+  last4: z.string().nullable().describe("Last 4 characters of the key, to tell keys apart. Null for keys created before rotation support."),
+  publishableKey: z.string().nullable().describe("The full publishable key (public by design). Always null for secret keys."),
+  allowedOrigins: z.array(z.string()).nullable().describe("Browser origins allowed to use a publishable key."),
+  active: z.boolean(),
+  current: z.boolean().describe("True for the key that made this request."),
+  createdAt: z.string(),
+  revokedAt: z.string().nullable(),
+});
+
+export const apiKeyListResponseSchema = z.object({ items: z.array(apiKeySummarySchema) });
+
+export const apiKeyRotateResponseSchema = z.object({
+  apiKey: z.string().describe("The new secret key. Shown once; the key that made this request is revoked immediately."),
+  key: apiKeySummarySchema,
+});
+
+const originSchema = z
+  .string()
+  .max(200)
+  .refine(
+    (v) => {
+      try {
+        const u = new URL(v);
+        return (u.protocol === "https:" || u.protocol === "http:") && u.origin === v;
+      } catch {
+        return false;
+      }
+    },
+    { message: "must be an origin like https://shop.example.com (scheme + host + optional port, no path or trailing slash)" }
+  );
+
+export const publishableKeyCreateSchema = z.object({
+  allowedOrigins: z
+    .array(originSchema)
+    .min(1)
+    .max(10)
+    .describe("Sites allowed to use this key from a browser, e.g. [\"https://shop.example.com\"]."),
+});
+
+export const apiKeyRevokeSchema = z.object({
+  keyId: z.string().uuid().describe("Id of the key to revoke, from GET /v1/partners/me/api-keys."),
+});
+
 export type QuoteBody = z.infer<typeof quoteBodySchema>;
 export type SubmitBody = z.infer<typeof submitBodySchema>;
 

@@ -9,7 +9,8 @@ Authoritative plan for building the customer-facing and partner-facing frontend 
 - **One frontend app, `apps/web`**: marketing routes (`/`, `/how-it-works`, `/developers`, `/pricing`, `/signup`) + authenticated dashboard under `/app/*`. Signup hands the new key to the dashboard in memory (no key in URLs). Replaces separate `apps/landing` / `apps/dashboard`.
 - Key-management routes become `/v1/partners/me/api-keys/...` (no `:id`; the key already identifies the partner).
 - `packages/api-client` deferred: generate OpenAPI types into `@arc/gateway-sdk` instead of a second client.
-- Quote/intent/ledger reads are scoped **per API key** today. When key rotation lands, move all of them to partner scope together.
+- Quote/intent/ledger reads are scoped to the **partner** across all its keys (done in step 5 with key rotation). Legacy keys without a partner still see only their own rows.
+- **Publishable keys cannot submit intents.** With `QUOTE_PROVIDER=arc`, submit spends the gateway hot wallet and `signedPayload` is not verified, so a browser-held key that could submit would let anyone drain it. The widget quotes and polls with `pk_live_`; the partner's server submits with the secret key via the widget's `submitIntent` callback.
 
 **Order of work** (each step ends with green build/tests + a commit on `feat/b2b-frontend`)
 
@@ -20,8 +21,8 @@ Authoritative plan for building the customer-facing and partner-facing frontend 
 | 2 | Scaffold `apps/web` (React 18 + Vite + Tailwind 3 + react-query), API-key login, dashboard shell | ✅ done |
 | 3 | Marketing pages + `/signup` with one-time key reveal | ✅ done |
 | 4 | Dashboard: login, overview, customers, ledger + CSV, transactions, settings (+ `byToken` on `GET /v1/ledger`) | ✅ done |
-| 5 | Publishable keys, key rotate/revoke, `ArcSwapWidget` (React + web component) | next |
-| 6 | Customer accounts: password (scrypt) + sessions + payout wallet; payout execution deferred | |
+| 5 | Publishable keys, key rotate/revoke, `ArcSwapWidget` (React + web component), partner-wide scope | ✅ done |
+| 6 | Customer accounts: password (scrypt) + sessions + payout wallet; payout execution deferred | next |
 
 ---
 
@@ -140,8 +141,7 @@ New tables:
 | `GET` | `/v1/quotes` | partner key | ✅ built — list quotes for a key: `?customerId=&limit=&offset=` |
 | `GET` | `/v1/intents` | partner key | ✅ built — list intents for a key: `?status=&customerId=&limit=&offset=` |
 | `GET` | `/v1/partners/me` | partner key | ✅ built — partner profile for `/settings` |
-| `POST` | `/v1/partners/me/api-keys/rotate` | partner key | Rotate a business key (returns new key once; revokes old) |
-| `POST` | `/v1/partners/me/api-keys/revoke` | partner key | Revoke a key |
+| `GET`/`POST` | `/v1/partners/me/api-keys[/rotate,/publishable,/revoke]` | partner key | ✅ built (step 5) — see §9 "API keys" |
 | `POST` | `/v1/customers/:id/password` | customer session | Set/change customer password |
 | `POST` | `/v1/customers/:id/wallet` | customer session | Set payout wallet + chain |
 
@@ -213,7 +213,7 @@ New tables:
 - [ ] Dashboard login validates the API key; `/`, `/customers`, `/ledger` render real data from the gateway; `/transactions` exists once list endpoints land
 - [ ] Widget submits a quote and continuously surfaces status through terminal state, emitting typed events
 - [ ] Customer password set/change + payout-wallet endpoints implemented with secure hashing/sessions; frontend flow exists; payout execution explicitly deferred
-- [ ] Swagger `/docs` and `reports/ENDPOINT_TEST_REPORT.md` updated for every backend addition (43/43 after step 4)
+- [ ] Swagger `/docs` and `reports/ENDPOINT_TEST_REPORT.md` updated for every backend addition (53/53 after step 5)
 - [ ] No secrets in any frontend bundle; only `VITE_GATEWAY_URL` envs
 
 ---
@@ -371,11 +371,20 @@ SDK: `client.listCustomers()`, `client.listQuotes()`, `client.listIntents()`, `c
 
 **CORS:** browser origins allowed via `CORS_ORIGINS` (comma-separated, default `http://localhost:5173`, `*` = any). Methods `GET, POST`; headers `authorization, content-type`.
 
+### API keys (partner secret key required) — built in step 5
+
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/v1/partners/me/api-keys` | All keys of the business (secret keys masked: `keyPrefix` + `last4`; publishable keys in full), with `current`, `active`, `revokedAt`. |
+| `POST` | `/v1/partners/me/api-keys/rotate` | `201 { apiKey, key }`. New secret key shown once; the calling key is revoked in the same transaction. 5/min/IP. |
+| `POST` | `/v1/partners/me/api-keys/publishable` | Body `{ allowedOrigins: ["https://shop.example.com"] }` (1–10 origins, scheme+host[+port], no path). `201` key summary with `publishableKey`. |
+| `POST` | `/v1/partners/me/api-keys/revoke` | Body `{ keyId }`. Idempotent. `400` when revoking the calling key (rotate instead), `404` for another partner's key. |
+
+Publishable keys (`pk_live_…`) are accepted only on `POST /v1/quotes` and `GET /v1/intents/:id`, and only with an `Origin` header in the key's allowlist; anything else → `403`. Those routes (plus `/v1/chains`, `/v1/tokens`) answer CORS from any origin; all other routes follow `CORS_ORIGINS`.
+
 ### Planned additions (not built yet)
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| `POST` | `/v1/partners/me/api-keys/rotate` | partner key | Rotate business key (new key returned once) |
-| `POST` | `/v1/partners/me/api-keys/revoke` | partner key | Revoke a key |
 | `POST` | `/v1/customers/:id/password` | customer session | Set/change customer password |
 | `POST` | `/v1/customers/:id/wallet` | customer session | Set payout wallet + chain |

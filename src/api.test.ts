@@ -1035,8 +1035,8 @@ describe("dashboard list endpoints and CORS", () => {
 
     const evil = await app.inject({
       method: "GET",
-      url: "/v1/chains",
-      headers: { origin: "https://evil.example" },
+      url: "/v1/ledger",
+      headers: { origin: "https://evil.example", ...auth() },
     });
     expect(evil.headers["access-control-allow-origin"]).toBeUndefined();
   });

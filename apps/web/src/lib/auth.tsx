@@ -17,6 +17,8 @@ interface AuthState {
   client: GatewayClient | null;
   /** Validates the key against GET /v1/partners/me, then stores it. */
   login: (apiKey: string) => Promise<PartnerProfile>;
+  /** Switch to a key the gateway just issued (rotation), without a round trip. */
+  adoptKey: (apiKey: string) => void;
   logout: () => void;
 }
 
@@ -53,6 +55,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [queryClient]
   );
 
+  const adoptKey = useCallback(
+    (key: string) => {
+      // Same partner, so carry the profile over (no loading flash), then
+      // drop everything cached under the revoked key.
+      const old = readStored(API_KEY_STORAGE);
+      const me = old ? queryClient.getQueryData<PartnerProfile>(["me", old]) : undefined;
+      if (me) queryClient.setQueryData(["me", key], me);
+      if (old) queryClient.removeQueries({ predicate: (q) => q.queryKey[1] === old });
+      writeStored(API_KEY_STORAGE, key);
+      setApiKey(key);
+    },
+    [queryClient]
+  );
+
   const logout = useCallback(() => {
     writeStored(API_KEY_STORAGE, null);
     setApiKey(null);
@@ -64,9 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       apiKey,
       client: apiKey ? createGatewayClient(apiKey) : null,
       login,
+      adoptKey,
       logout,
     }),
-    [apiKey, login, logout]
+    [apiKey, login, adoptKey, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

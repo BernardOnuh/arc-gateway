@@ -10,6 +10,7 @@ const nav = [
   { to: "/app/customers", label: "Customers" },
   { to: "/app/transactions", label: "Transactions" },
   { to: "/app/ledger", label: "Ledger" },
+  { to: "/app/widget", label: "Widget" },
   { to: "/app/settings", label: "Settings" },
 ];
 

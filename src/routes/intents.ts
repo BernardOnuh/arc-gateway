@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and, desc, count, type SQL } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
-import { requireApiKey } from "../auth/apiKey.js";
+import { ownedByCaller, requireApiKey } from "../auth/apiKey.js";
 import { db } from "../db/index.js";
 import { quotes, intents } from "../db/schema.js";
 import type { UpstreamQuote } from "../providers/types.js";
@@ -27,7 +27,7 @@ export async function intentRoutes(app: FastifyInstance) {
         tags: ["intents"],
         summary: "Submit a signed intent",
         description:
-          "Idempotent per quoteId: the first call claims the quote and submits upstream, later calls return the existing intent. With QUOTE_PROVIDER=arc this executes the swap: the gateway hot wallet (ARC_SDK_PRIVATE_KEY) approves the origin token and broadcasts the crosschain (CCTP) swap to Arc; listen on GET /v1/intents/:id until status EXECUTED_ON_ARC with a destination tx hash. The partner's signedPayload is currently unused (the gateway wallet signs).",
+          "Idempotent per quoteId: the first call claims the quote and submits upstream, later calls return the existing intent. With QUOTE_PROVIDER=arc this executes the swap: the gateway hot wallet (ARC_SDK_PRIVATE_KEY) approves the origin token and broadcasts the crosschain (CCTP) swap to Arc; listen on GET /v1/intents/:id until status EXECUTED_ON_ARC with a destination tx hash. The partner's signedPayload is currently unused (the gateway wallet signs). Secret keys only: publishable keys get 403, because submitting spends gateway funds. The quote may come from any key of the same partner (e.g. created by the widget with a publishable key).",
         security: [{ bearerAuth: [] }],
         body: {
           ...toJsonSchema(submitBodySchema),
@@ -53,7 +53,7 @@ export async function intentRoutes(app: FastifyInstance) {
       const quote = await db
         .select()
         .from(quotes)
-        .where(and(eq(quotes.id, quoteId), eq(quotes.apiKeyId, key.id)))
+        .where(and(eq(quotes.id, quoteId), ownedByCaller(quotes.apiKeyId, key)))
         .limit(1);
       if (quote.length === 0) {
         return reply.code(400).send({ error: "quote not found or not yours" });
@@ -118,10 +118,12 @@ export async function intentRoutes(app: FastifyInstance) {
     "/v1/intents/:id",
     {
       onRequest: requireApiKey,
+      config: { publishable: true },
       schema: {
         tags: ["intents"],
         summary: "Intent status",
-        description: "Polls the upstream provider and persists any status change.",
+        description:
+          "Polls the upstream provider and persists any status change. Accepts a secret key or a publishable key (from an allowed Origin) of the partner that owns the intent.",
         security: [{ bearerAuth: [] }],
         params: toJsonSchema(intentIdParamsSchema),
         response: {
@@ -139,7 +141,7 @@ export async function intentRoutes(app: FastifyInstance) {
       const intent = await db
         .select()
         .from(intents)
-        .where(and(eq(intents.id, id), eq(intents.apiKeyId, key.id)))
+        .where(and(eq(intents.id, id), ownedByCaller(intents.apiKeyId, key)))
         .limit(1);
       if (intent.length === 0) {
         return reply.code(404).send({ error: "not found" });
@@ -201,7 +203,7 @@ export async function intentRoutes(app: FastifyInstance) {
         tags: ["intents"],
         summary: "List intents",
         description:
-          "Lists intents submitted with this API key, newest first. Filter with ?status= and ?customerId=; paginate with ?limit=&offset=. Returns the last stored status without polling upstream; use GET /v1/intents/:id to refresh a single intent.",
+          "Lists intents submitted with any of this partner's API keys, newest first. Filter with ?status= and ?customerId=; paginate with ?limit=&offset=. Returns the last stored status without polling upstream; use GET /v1/intents/:id to refresh a single intent.",
         security: [{ bearerAuth: [] }],
         querystring: toJsonSchema(intentListQuerySchema),
         response: {
@@ -219,7 +221,7 @@ export async function intentRoutes(app: FastifyInstance) {
       const { limit, offset, status, customerId } = parsed.data;
       const key = request.apiKey!;
 
-      const filters: SQL[] = [eq(intents.apiKeyId, key.id)];
+      const filters: SQL[] = [ownedByCaller(intents.apiKeyId, key)];
       if (status) filters.push(eq(intents.status, status));
       if (customerId) filters.push(eq(quotes.customerId, customerId));
       const where = and(...filters);
