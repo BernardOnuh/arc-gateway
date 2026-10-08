@@ -79,15 +79,28 @@ export const customerResponseSchema = z.object({
   createdAt: z.string(),
 });
 
+export const ledgerTokenTotalsSchema = z.object({
+  chainId: z.number().int().describe("Origin chain of tokenIn."),
+  symbol: z.string(),
+  address: z.string(),
+  decimals: z.number().int().nullable().describe("Token decimals; null if the token is no longer in the registry."),
+  transactions: z.number().int(),
+  amountInTotal: z.string().describe("Sum of amountIn in this token (base units)."),
+  feeTotal: z.string().describe("Fees earned in this token (base units)."),
+});
+
 export const ledgerResponseSchema = z.object({
   partnerId: z.string(),
   customerId: z.string().nullable().describe("Filter applied, or null for all customers."),
   totals: z.object({
     feeBps: z.number().int(),
     transactions: z.number().int().describe("Number of quoted transactions."),
-    amountInTotal: z.string().describe("Sum of amountIn across transactions (base units)."),
-    feeTotal: z.string().describe("Total fees earned across transactions (base units)."),
+    amountInTotal: z
+      .string()
+      .describe("Raw sum of amountIn base units across all tokens. Mixes decimals; use byToken for display."),
+    feeTotal: z.string().describe("Raw sum of fee base units across all tokens. Mixes decimals; use byToken for display."),
   }),
+  byToken: z.array(ledgerTokenTotalsSchema).describe("Totals per origin token, most used first."),
   byCustomer: z.array(
     z.object({
       customerId: z.string().nullable().describe("Attributed customer, or null for unattributed."),
@@ -96,6 +109,7 @@ export const ledgerResponseSchema = z.object({
       transactions: z.number().int(),
       amountInTotal: z.string(),
       feeTotal: z.string(),
+      byToken: z.array(ledgerTokenTotalsSchema),
     })
   ),
 });

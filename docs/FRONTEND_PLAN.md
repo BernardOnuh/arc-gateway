@@ -19,8 +19,8 @@ Authoritative plan for building the customer-facing and partner-facing frontend 
 | 1 | Backend unblockers: CORS, `GET /v1/customers`, `GET /v1/partners/me`, `GET /v1/quotes`, `GET /v1/intents` (+ SDK methods) | ✅ done |
 | 2 | Scaffold `apps/web` (React 18 + Vite + Tailwind 3 + react-query), API-key login, dashboard shell | ✅ done |
 | 3 | Marketing pages + `/signup` with one-time key reveal | ✅ done |
-| 4 | Dashboard: login, overview, customers, ledger + CSV, transactions, settings | next |
-| 5 | Publishable keys, key rotate/revoke, `ArcSwapWidget` (React + web component) | |
+| 4 | Dashboard: login, overview, customers, ledger + CSV, transactions, settings (+ `byToken` on `GET /v1/ledger`) | ✅ done |
+| 5 | Publishable keys, key rotate/revoke, `ArcSwapWidget` (React + web component) | next |
 | 6 | Customer accounts: password (scrypt) + sessions + payout wallet; payout execution deferred | |
 
 ---
@@ -213,7 +213,7 @@ New tables:
 - [ ] Dashboard login validates the API key; `/`, `/customers`, `/ledger` render real data from the gateway; `/transactions` exists once list endpoints land
 - [ ] Widget submits a quote and continuously surfaces status through terminal state, emitting typed events
 - [ ] Customer password set/change + payout-wallet endpoints implemented with secure hashing/sessions; frontend flow exists; payout execution explicitly deferred
-- [ ] Swagger `/docs` and `reports/ENDPOINT_TEST_REPORT.md` updated for every backend addition (42/42 baseline after step 1)
+- [ ] Swagger `/docs` and `reports/ENDPOINT_TEST_REPORT.md` updated for every backend addition (43/43 after step 4)
 - [ ] No secrets in any frontend bundle; only `VITE_GATEWAY_URL` envs
 
 ---
@@ -343,12 +343,16 @@ Response `200`:
   "partnerId": "uuid",
   "customerId": "uuid | null",
   "totals": { "feeBps": 10, "transactions": 3, "amountInTotal": "3000000000000000000", "feeTotal": "3000000000000000" },
+  "byToken": [
+    { "chainId": 8453, "symbol": "WETH", "address": "0x4200...0006", "decimals": 18, "transactions": 2, "amountInTotal": "...", "feeTotal": "..." }
+  ],
   "byCustomer": [
-    { "customerId": "uuid | null", "externalId": "user_1234 | null", "recipientAddress": "0x... | null", "transactions": 1, "amountInTotal": "...", "feeTotal": "..." }
+    { "customerId": "uuid | null", "externalId": "user_1234 | null", "recipientAddress": "0x... | null", "transactions": 1, "amountInTotal": "...", "feeTotal": "...", "byToken": [ ... ] }
   ]
 }
 ```
 - Aggregates quotes created by this API key; `amountInTotal`/`feeTotal` are base-unit integer strings.
+- `totals` and per-customer `amountInTotal`/`feeTotal` add base units across **different tokens** (mixed decimals), so they are not displayable money. Use `byToken` (added in step 4), grouped by origin chain + `tokenIn`, with `decimals` for formatting (`null` if the token left the registry).
 - `byCustomer` includes an unattributed bucket (`customerId: null`) for quotes made without `customerId`.
 Errors: `400` `api key is not linked to a partner` (legacy key) or `customer not found for this partner` (foreign filter); `401`.
 

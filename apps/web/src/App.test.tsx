@@ -62,7 +62,7 @@ describe("api-key login", () => {
     await userEvent.type(await screen.findByLabelText("API key"), `  ${GOOD_KEY}  `);
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
-    expect(await screen.findByRole("heading", { name: "Customers" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Customers" })).toBeInTheDocument();
     expect(screen.getByText("Acme Pay")).toBeInTheDocument();
     expect(window.localStorage.getItem(API_KEY_STORAGE)).toBe(GOOD_KEY);
     expect(String(fetchMock.mock.calls[0][0])).toBe("http://localhost:3000/v1/partners/me");

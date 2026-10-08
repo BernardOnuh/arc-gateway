@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireApiKey } from "../auth/apiKey.js";
 import { db } from "../db/index.js";
 import { quotes, customers } from "../db/schema.js";
+import { resolveToken } from "../tokens.js";
 import { ledgerResponseSchema, errorResponseSchema, toJsonSchema } from "../schemas.js";
 
 export async function ledgerRoutes(app: FastifyInstance) {
@@ -39,6 +40,7 @@ export async function ledgerRoutes(app: FastifyInstance) {
           customerId: quotes.customerId,
           amountIn: quotes.amountIn,
           feeAmount: quotes.feeAmount,
+          request: quotes.request,
         })
         .from(quotes)
         .where(eq(quotes.apiKeyId, key.id));
@@ -63,51 +65,89 @@ export async function ledgerRoutes(app: FastifyInstance) {
         .where(eq(customers.partnerId, key.partnerId));
       const customerMap = new Map(customerRows.map((c) => [c.id, c]));
 
-      const grouped = new Map<string, { transactions: number; amountInTotal: bigint; feeTotal: bigint }>();
-      let transactions = 0;
-      let amountInTotal = 0n;
-      let feeTotal = 0n;
-
+      const totalsAll = new Totals();
+      const grouped = new Map<string | null, Totals>();
       for (const row of rows) {
         const custId = row.customerId ?? null;
-        const keyed = custId ?? "__unattributed__";
-        const existing = grouped.get(keyed) ?? {
-          transactions: 0,
-          amountInTotal: 0n,
-          feeTotal: 0n,
-        };
-        existing.transactions += 1;
-        existing.amountInTotal += BigInt(row.amountIn);
-        existing.feeTotal += BigInt(row.feeAmount);
-        grouped.set(keyed, existing);
-        transactions += 1;
-        amountInTotal += BigInt(row.amountIn);
-        feeTotal += BigInt(row.feeAmount);
+        const req = row.request as { originChainId: number; tokenIn: string };
+        const token = resolveToken(req.originChainId, req.tokenIn);
+        const tokenRef: TokenRef = token
+          ? { chainId: token.chainId, symbol: token.symbol, address: token.address, decimals: token.decimals }
+          : { chainId: req.originChainId, symbol: req.tokenIn, address: req.tokenIn, decimals: null };
+        const amountIn = BigInt(row.amountIn);
+        const fee = BigInt(row.feeAmount);
+        totalsAll.add(tokenRef, amountIn, fee);
+        const group = grouped.get(custId) ?? new Totals();
+        group.add(tokenRef, amountIn, fee);
+        grouped.set(custId, group);
       }
 
       const byCustomer = Array.from(grouped.entries()).map(([custId, g]) => {
-        const customer = custId === "__unattributed__" ? undefined : customerMap.get(custId);
+        const customer = custId === null ? undefined : customerMap.get(custId);
         return {
           customerId: customer?.id ?? null,
           externalId: customer?.externalId ?? null,
           recipientAddress: customer?.recipientAddress ?? null,
-          transactions: g.transactions,
-          amountInTotal: g.amountInTotal.toString(),
-          feeTotal: g.feeTotal.toString(),
+          ...g.summary(),
         };
       });
 
+      const all = totalsAll.summary();
       return reply.send({
         partnerId: key.partnerId,
         customerId: customerId ?? null,
         totals: {
           feeBps: key.feeBps,
-          transactions,
-          amountInTotal: amountInTotal.toString(),
-          feeTotal: feeTotal.toString(),
+          transactions: all.transactions,
+          amountInTotal: all.amountInTotal,
+          feeTotal: all.feeTotal,
         },
+        byToken: all.byToken,
         byCustomer,
       });
     }
   );
+}
+
+interface TokenRef {
+  chainId: number;
+  symbol: string;
+  address: string;
+  decimals: number | null;
+}
+
+/** Running sums overall and per origin token (amounts in different tokens can't be added meaningfully). */
+class Totals {
+  transactions = 0;
+  amountIn = 0n;
+  fee = 0n;
+  private tokens = new Map<string, { token: TokenRef; transactions: number; amountIn: bigint; fee: bigint }>();
+
+  add(token: TokenRef, amountIn: bigint, fee: bigint) {
+    this.transactions += 1;
+    this.amountIn += amountIn;
+    this.fee += fee;
+    const id = `${token.chainId}:${token.address.toLowerCase()}`;
+    const t = this.tokens.get(id) ?? { token, transactions: 0, amountIn: 0n, fee: 0n };
+    t.transactions += 1;
+    t.amountIn += amountIn;
+    t.fee += fee;
+    this.tokens.set(id, t);
+  }
+
+  summary() {
+    return {
+      transactions: this.transactions,
+      amountInTotal: this.amountIn.toString(),
+      feeTotal: this.fee.toString(),
+      byToken: Array.from(this.tokens.values())
+        .sort((a, b) => b.transactions - a.transactions || a.token.symbol.localeCompare(b.token.symbol))
+        .map((t) => ({
+          ...t.token,
+          transactions: t.transactions,
+          amountInTotal: t.amountIn.toString(),
+          feeTotal: t.fee.toString(),
+        })),
+    };
+  }
 }

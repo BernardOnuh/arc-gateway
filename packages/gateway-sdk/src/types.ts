@@ -75,6 +75,17 @@ export interface Intent {
   updatedAt: string;
 }
 
+export interface LedgerTokenTotals {
+  chainId: number;
+  symbol: string;
+  address: string;
+  /** null if the token is no longer in the gateway's registry. */
+  decimals: number | null;
+  transactions: number;
+  amountInTotal: string;
+  feeTotal: string;
+}
+
 export interface LedgerCustomer {
   customerId: string | null;
   externalId: string | null;
@@ -82,6 +93,7 @@ export interface LedgerCustomer {
   transactions: number;
   amountInTotal: string;
   feeTotal: string;
+  byToken: LedgerTokenTotals[];
 }
 
 export interface Ledger {
@@ -93,6 +105,8 @@ export interface Ledger {
     amountInTotal: string;
     feeTotal: string;
   };
+  /** Totals per origin token. Use these for display: the raw totals mix decimals. */
+  byToken: LedgerTokenTotals[];
   byCustomer: LedgerCustomer[];
 }
 

@@ -10,6 +10,7 @@ export type {
   IntentStatus,
   Ledger,
   LedgerCustomer,
+  LedgerTokenTotals,
   ListIntentsParams,
   ListQuotesParams,
   Page,

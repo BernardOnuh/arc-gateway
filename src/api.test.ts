@@ -688,6 +688,29 @@ describe("partner onboarding, customers and ledger", () => {
     expect(filtered.json().totals.feeTotal).toBe("1000000000000000");
   });
 
+  it("breaks ledger totals down per origin token", async () => {
+    const usdc = await app.inject({
+      method: "POST",
+      url: "/v1/quotes",
+      headers: { authorization: `Bearer ${partnerKey}` },
+      body: quoteBody({ tokenIn: "USDC", amountIn: "5000000" }),
+    });
+    expect(usdc.statusCode).toBe(200);
+
+    const data = (
+      await app.inject({ method: "GET", url: "/v1/ledger", headers: { authorization: `Bearer ${partnerKey}` } })
+    ).json();
+    expect(data.totals.transactions).toBe(2);
+    expect(data.byToken).toEqual([
+      expect.objectContaining({ chainId: 1, symbol: "USDC", decimals: 6, transactions: 1, amountInTotal: "5000000", feeTotal: "5000" }),
+      expect.objectContaining({ chainId: 1, symbol: "WETH", decimals: 18, transactions: 1, feeTotal: "1000000000000000" }),
+    ]);
+    const unattributed = data.byCustomer.find((c: { customerId: string | null }) => c.customerId === null);
+    expect(unattributed.byToken).toEqual([expect.objectContaining({ symbol: "USDC", feeTotal: "5000" })]);
+    const attributed = data.byCustomer.find((c: { customerId: string | null }) => c.customerId === customerId);
+    expect(attributed.byToken).toEqual([expect.objectContaining({ symbol: "WETH", transactions: 1 })]);
+  });
+
   it("rejects a quote attributed to another partner's customer", async () => {
     const other = await app.inject({
       method: "POST",

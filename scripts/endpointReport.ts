@@ -190,6 +190,8 @@ async function main() {
 
   const ledger = await json(await fetch(`${BASE}/v1/ledger`, { headers: pAuth })) as any;
   summary("GET /v1/ledger totals match", ledger.totals.transactions === 1 && ledger.totals.feeTotal === custFee && ledger.byCustomer[0]?.customerId === cust.customerId, `tx=${ledger.totals.transactions} feeTotal=${S(ledger.totals.feeTotal)}`);
+  const tok = ledger.byToken?.[0];
+  summary("GET /v1/ledger byToken breakdown", ledger.byToken?.length === 1 && tok.feeTotal === custFee && typeof tok.decimals === "number" && ledger.byCustomer[0]?.byToken?.[0]?.symbol === tok.symbol, `${S(tok?.symbol)} decimals=${tok?.decimals} feeTotal=${S(tok?.feeTotal)}`);
   const ledgerFiltered = await json(await fetch(`${BASE}/v1/ledger?customerId=${cust.customerId}`, { headers: pAuth })) as any;
   summary("GET /v1/ledger?customerId filtered", ledgerFiltered.totals.transactions === 1 && ledgerFiltered.customerId === cust.customerId, `tx=${ledgerFiltered.totals.transactions}, customerId=${S(ledgerFiltered.customerId)}`);
   const ledgerForeign = await fetch(`${BASE}/v1/ledger?customerId=11111111-1111-4111-8111-111111111111`, { headers: pAuth });
@@ -341,6 +343,7 @@ async function main() {
   lines.push(`Customer \`report_user\` → \`${cust.customerId}\` (created \`${custRes.status}\`, re-registration \`${custDupRes.status}\` idempotent).  `);
   lines.push(`Quote attributed to the customer: \`${quoteWithCust.status}\`, fee \`${S(qcust.feeAmount)}\`.  `);
   lines.push(`Ledger: \`${ledger.totals.transactions}\` transaction, feeTotal \`${S(ledger.totals.feeTotal)}\`, attributed to customer \`${ledger.byCustomer?.[0]?.customerId}\`.  `);
+  lines.push(`Per-token totals (\`byToken\`, overall and per customer): ${(ledger.byToken ?? []).map((t: any) => `\`${t.symbol}\` on chain ${t.chainId} (${t.decimals} decimals) fee \`${t.feeTotal}\``).join(", ")}. The raw \`totals\` mix token decimals; display \`byToken\`.  `);
   lines.push(`Legacy (pre-partner) keys cannot register customers or read the ledger → 400.`);
   lines.push(``);
   lines.push(`### Dashboard read endpoints`);
