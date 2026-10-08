@@ -18,8 +18,8 @@ Authoritative plan for building the customer-facing and partner-facing frontend 
 | 0 | Baseline commit; split `server.ts` into `src/routes/*` | ✅ done |
 | 1 | Backend unblockers: CORS, `GET /v1/customers`, `GET /v1/partners/me`, `GET /v1/quotes`, `GET /v1/intents` (+ SDK methods) | ✅ done |
 | 2 | Scaffold `apps/web` (React 18 + Vite + Tailwind 3 + react-query), API-key login, dashboard shell | ✅ done |
-| 3 | Marketing pages + `/signup` with one-time key reveal | next |
-| 4 | Dashboard: login, overview, customers, ledger + CSV, transactions, settings | |
+| 3 | Marketing pages + `/signup` with one-time key reveal | ✅ done |
+| 4 | Dashboard: login, overview, customers, ledger + CSV, transactions, settings | next |
 | 5 | Publishable keys, key rotate/revoke, `ArcSwapWidget` (React + web component) | |
 | 6 | Customer accounts: password (scrypt) + sessions + payout wallet; payout execution deferred | |
 

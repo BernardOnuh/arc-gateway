@@ -1,8 +1,17 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
+
+// Never let a test reach a real gateway: unmocked requests fail fast.
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => new Response(JSON.stringify({ error: "no mock for this request" }), { status: 503 }))
+  );
+});
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   window.localStorage.clear();
 });

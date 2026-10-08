@@ -11,6 +11,8 @@ export function createQueryClient(): QueryClient {
         retry: (count, err) =>
           !(err instanceof GatewayError && err.statusCode >= 400 && err.statusCode < 500) &&
           count < 2,
+        // Keep tests fast; real users get react-query's exponential backoff.
+        ...(import.meta.env.MODE === "test" ? { retryDelay: 0 } : {}),
       },
     },
   });
