@@ -258,3 +258,15 @@ export const webhookEvents = pgTable("webhook_events", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   deliveredAt: timestamp("delivered_at"),
 });
+
+/** One-time partner password reset links (1 hour). Only the sha256 is stored. */
+export const partnerPasswordResets = pgTable("partner_password_resets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  partnerId: uuid("partner_id")
+    .notNull()
+    .references(() => partners.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});

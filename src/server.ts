@@ -22,6 +22,7 @@ import { quoteRoutes } from "./routes/quotes.js";
 import { paymentRoutes } from "./routes/payments.js";
 import { brandingRoutes } from "./routes/branding.js";
 import { webhookRoutes } from "./routes/webhooks.js";
+import { passwordResetRoutes } from "./routes/passwordReset.js";
 import { sweepPayments } from "./routes/payments.js";
 import { deliverDue } from "./webhooks.js";
 import { intentRoutes } from "./routes/intents.js";
@@ -161,6 +162,7 @@ export async function buildApp() {
   await paymentRoutes(app);
   await brandingRoutes(app);
   await webhookRoutes(app);
+  await passwordResetRoutes(app);
   await intentRoutes(app);
 
   return app;

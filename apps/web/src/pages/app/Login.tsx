@@ -69,7 +69,15 @@ export function Login() {
                   className={inputClass}
                 />
               </Field>
-              <Field label="Password" htmlFor="login-password">
+              <Field
+                label="Password"
+                htmlFor="login-password"
+                hint={
+                  <Link to="/app/forgot-password" className="font-medium text-brand-600 hover:underline">
+                    Forgot password?
+                  </Link>
+                }
+              >
                 <PasswordInput id="login-password" autoComplete="current-password" value={password} onChange={setPassword} />
               </Field>
             </>

@@ -72,6 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       try {
         const profile = await sessionClient.me();
+        // A response without a partner isn't a session (proxies, captive portals, bad mocks).
+        if (!profile?.partnerId) throw new Error("no partner in profile");
         if (!cancelled) signIn(profile);
       } catch {
         if (!cancelled) setStatus("signedOut");

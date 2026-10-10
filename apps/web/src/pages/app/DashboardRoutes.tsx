@@ -2,6 +2,8 @@ import { Route, Routes } from "react-router-dom";
 import { RequireAuth } from "../../components/RequireAuth";
 import { DashboardLayout } from "../../layouts/DashboardLayout";
 import { Login } from "./Login";
+import { ForgotPassword } from "./ForgotPassword";
+import { ResetPassword } from "./ResetPassword";
 import { Overview } from "./Overview";
 import { Customers } from "./Customers";
 import { Transactions } from "./Transactions";
@@ -16,6 +18,8 @@ export default function DashboardRoutes() {
   return (
     <Routes>
       <Route path="login" element={<Login />} />
+      <Route path="forgot-password" element={<ForgotPassword />} />
+      <Route path="reset-password" element={<ResetPassword />} />
       <Route
         element={
           <RequireAuth>

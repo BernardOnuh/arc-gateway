@@ -252,6 +252,37 @@ describe("dashboard session cookie", () => {
     });
   });
 
+  describe("password reset", () => {
+    it("emails a one-time link, sets the new password, and signs out existing sessions", async () => {
+      const { testOutbox } = await import("./email.js");
+      await makePartner("sess-reset", true);
+      const email = `sess-reset-${suffix}@test.local`;
+      const login = (password: string) => app.inject({ method: "POST", url: "/v1/dashboard/session", body: { email, password } });
+      const before = sessionCookie(await login(PASSWORD));
+
+      // Unknown emails get the same answer and no email.
+      const outboxSize = testOutbox.length;
+      expect((await app.inject({ method: "POST", url: "/v1/partners/password-reset", body: { email: `nobody-${suffix}@test.local` } })).statusCode).toBe(200);
+      expect(testOutbox.length).toBe(outboxSize);
+
+      expect((await app.inject({ method: "POST", url: "/v1/partners/password-reset", body: { email: email.toUpperCase() } })).statusCode).toBe(200);
+      const mail = testOutbox.at(-1)!;
+      expect(mail.to).toBe(email);
+      const token = decodeURIComponent(mail.text.match(/token=([^\s]+)/)![1]);
+      expect(mail.html).toContain("Choose a new password");
+
+      const confirm = (newPassword: string) =>
+        app.inject({ method: "POST", url: "/v1/partners/password-reset/confirm", body: { token, newPassword } });
+      expect((await confirm("short")).statusCode).toBe(400);
+      expect((await confirm("a brand new passphrase")).statusCode).toBe(200);
+      expect((await confirm("another new passphrase")).statusCode).toBe(400); // used once only
+
+      expect((await me(before)).statusCode).toBe(401); // old sessions signed out
+      expect((await login(PASSWORD)).statusCode).toBe(401);
+      expect((await login("a brand new passphrase")).statusCode).toBe(200);
+    });
+  });
+
   it("prefers the bearer key over the cookie", async () => {
     const res = await app.inject({
       method: "GET",

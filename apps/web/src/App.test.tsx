@@ -165,3 +165,31 @@ describe("api-key login", () => {
     expectKeyNeverExposed(fetchMock);
   });
 });
+
+describe("password reset", () => {
+  it("requests a link from the login page", async () => {
+    const fetchMock = mockGateway((url) =>
+      url.pathname === "/v1/partners/me" ? { status: 401, body: { error: "unauthorized" } } : { status: 200, body: { ok: true } }
+    );
+    renderApp("/app/login");
+    await userEvent.click(await screen.findByRole("link", { name: "Forgot password?" }));
+    await userEvent.type(await screen.findByLabelText("Email"), "billing@acme.example");
+    await userEvent.click(screen.getByRole("button", { name: "Send reset link" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("reset link is on its way");
+    const req = fetchMock.mock.calls.find(([u]) => String(u).endsWith("/v1/partners/password-reset"))!;
+    expect(JSON.parse(String(req[1]!.body))).toEqual({ email: "billing@acme.example" });
+  });
+
+  it("uses the token once to set the new password", async () => {
+    const fetchMock = mockGateway((url) =>
+      url.pathname === "/v1/partners/me" ? { status: 401, body: { error: "unauthorized" } } : { status: 200, body: { ok: true } }
+    );
+    renderApp("/app/reset-password?token=cst_abc123token");
+    await userEvent.type(await screen.findByLabelText("New password"), "a fresh passphrase");
+    await userEvent.type(screen.getByLabelText("Confirm password"), "a fresh passphrase");
+    await userEvent.click(screen.getByRole("button", { name: "Set new password" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Your password is updated");
+    const req = fetchMock.mock.calls.find(([u]) => String(u).endsWith("/password-reset/confirm"))!;
+    expect(JSON.parse(String(req[1]!.body))).toEqual({ token: "cst_abc123token", newPassword: "a fresh passphrase" });
+  });
+});

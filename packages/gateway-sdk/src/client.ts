@@ -126,6 +126,15 @@ export class GatewayClient {
     return this.request("POST", "/v1/dashboard/session", { body, skipAuth: true });
   }
 
+  /** Emails a reset link if the address has an account (always resolves the same way). */
+  requestPasswordReset(email: string): Promise<{ ok: true }> {
+    return this.request("POST", "/v1/partners/password-reset", { body: { email }, skipAuth: true });
+  }
+
+  confirmPasswordReset(token: string, newPassword: string): Promise<{ ok: true }> {
+    return this.request("POST", "/v1/partners/password-reset/confirm", { body: { token, newPassword }, skipAuth: true });
+  }
+
   /** Sets or changes the dashboard password of the authenticated business. */
   setPassword(params: SetPasswordParams, apiKey?: string): Promise<{ ok: true }> {
     return this.request("POST", "/v1/partners/me/password", { body: params, apiKey });
