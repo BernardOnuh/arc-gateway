@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   ChainInfo,
+  CreatePaymentParams,
   CreateCustomerParams,
   ListIntentsParams,
   ListQuotesParams,
@@ -126,6 +127,35 @@ export function useSetPassword() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (params: { currentPassword?: string; newPassword: string }) => client.setPassword(params),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["me", scope] }),
+  });
+}
+
+export function usePayments(params: PageParams) {
+  const { client, scope } = useGateway();
+  return useQuery({
+    queryKey: ["payments", scope, params],
+    queryFn: () => client.listPayments(params),
+    placeholderData: keepPreviousData,
+    // Keep in-flight payments moving.
+    refetchInterval: (q) => (q.state.data?.items.some((p) => p.status === "processing") ? 5_000 : false),
+  });
+}
+
+export function useCreatePayment() {
+  const { client, scope } = useGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: CreatePaymentParams) => client.createPayment(params),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["payments", scope] }),
+  });
+}
+
+export function useSetPayoutAddress() {
+  const { client, scope } = useGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (address: string) => client.setPayoutAddress(address),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["me", scope] }),
   });
 }

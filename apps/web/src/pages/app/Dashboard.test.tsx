@@ -334,38 +334,118 @@ describe("settings", () => {
   });
 });
 
-describe("widget page", () => {
-  it("asks for a publishable key first", async () => {
+const pkRow = {
+  ...secretKeyRow,
+  id: "pk-1",
+  kind: "publishable",
+  keyPrefix: "pk_live_",
+  last4: "wdgt",
+  publishableKey: "pk_live_widgetwdgt",
+  allowedOrigins: [window.location.origin],
+  current: false,
+};
+
+describe("checkout studio", () => {
+  it("previews the checkout in demo mode even before a key exists", async () => {
     signedIn();
     renderApp("/app/widget");
-    expect(await screen.findByRole("link", { name: "Create one in Settings" })).toHaveAttribute("href", "/app/settings");
+    expect(await screen.findByTestId("arc-checkout")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
+    expect(screen.getByRole("note")).toHaveTextContent("Create a publishable key");
   });
 
-  it("shows embed code and a live preview when the key allows this origin", async () => {
-    const pkRow = {
-      ...secretKeyRow,
-      id: "pk-1",
-      kind: "publishable",
-      keyPrefix: "pk_live_",
-      last4: "wdgt",
-      publishableKey: "pk_live_widgetwdgt",
-      allowedOrigins: [window.location.origin],
-      current: false,
-    };
+  it("restyles the preview and puts the choices into the snippets", async () => {
+    const user = userEvent.setup();
     signedIn({ "GET /v1/partners/me/api-keys": () => ({ status: 200, body: { items: [secretKeyRow, pkRow] } }) });
     renderApp("/app/widget");
-    const user = userEvent.setup();
-    expect((await screen.findAllByText(/publishableKey="pk_live_widgetwdgt"/)).length).toBeGreaterThan(0);
-    expect(await screen.findByTestId("arc-swap-widget")).toBeInTheDocument();
-    expect(await screen.findByLabelText("From network")).toBeInTheDocument();
+    expect(await screen.findByText(/createPayment/)).toBeInTheDocument();
 
-    // Appearance choices restyle the preview and flow into the snippets.
     await user.click(screen.getByRole("radio", { name: "dark" }));
     await user.click(screen.getByRole("radio", { name: "Indigo" }));
-    expect(screen.getByTestId("arc-swap-widget")).toHaveAttribute("data-theme", "dark");
-    expect(screen.getByText(/accentColor="#4f46e5"/)).toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: /Show network details/ }));
+    expect(screen.getByTestId("arc-checkout")).toHaveAttribute("data-theme", "dark");
+
+    await user.click(screen.getByRole("tab", { name: "React" }));
+    const react = screen.getByText(/publishableKey="pk_live_widgetwdgt"/);
+    expect(react).toHaveTextContent('accentColor="#4f46e5"');
+    expect(react).toHaveTextContent("showNetworkDetails");
+    expect(react).toHaveTextContent("paymentId={paymentId}");
     await user.click(screen.getByRole("tab", { name: "Script tag" }));
-    expect(screen.getByText(/publishable-key="pk_live_widgetwdgt"/)).toHaveTextContent('accent-color="#4f46e5"');
-    expect(screen.getByText(/publishable-key="pk_live_widgetwdgt"/)).toHaveTextContent('theme="dark"');
+    expect(screen.getByText(/<arc-checkout/)).toHaveTextContent('theme="dark"');
+  });
+});
+
+describe("payments", () => {
+  const payment = (over: Record<string, unknown> = {}) => ({
+    paymentId: "pay-1",
+    merchantName: "Acme Pay",
+    amountCents: 1000,
+    currency: "USD",
+    description: "Pro plan",
+    reference: "order_1",
+    customerId: null,
+    status: "paid",
+    paidCents: 1000,
+    pendingCents: 0,
+    remainingCents: 0,
+    destChainId: 5042,
+    payoutAddress: "0x00000000000000000000000000000000000000aa",
+    expiresAt: "2026-10-08T12:00:00.000Z",
+    paidAt: "2026-10-08T11:05:00.000Z",
+    createdAt: "2026-10-08T11:00:00.000Z",
+    legs: [
+      { legId: "l1", token: { symbol: "USDC" }, status: "EXECUTED_ON_ARC", valueCents: 600 },
+      { legId: "l2", token: { symbol: "ETH" }, status: "EXECUTED_ON_ARC", valueCents: 400 },
+    ],
+    ...over,
+  });
+
+  it("asks for a payout address before payments can be created", async () => {
+    signedIn({ "GET /v1/payments": (url) => ({ status: 200, body: page([], url) }) });
+    renderApp("/app/payments");
+    expect(await screen.findByRole("note")).toHaveTextContent("Set a payout address");
+    expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
+  });
+
+  it("lists payments and creates one with a checkout link", async () => {
+    const user = userEvent.setup();
+    const fetchMock = signedIn({
+      "GET /v1/partners/me": () => ({ status: 200, body: { ...profile, payoutAddress: "0x00000000000000000000000000000000000000aa" } }),
+      "GET /v1/partners/me/api-keys": () => ({ status: 200, body: { items: [secretKeyRow, pkRow] } }),
+      "GET /v1/payments": (url) => ({ status: 200, body: page([payment()], url) }),
+      "POST /v1/payments": () => ({ status: 201, body: payment({ paymentId: "pay-2", status: "open", amountCents: 2500, legs: [] }) }),
+    });
+    renderApp("/app/payments");
+    const row = (await screen.findByText("order_1")).closest("tr")!;
+    expect(within(row).getByText("$10.00")).toBeInTheDocument();
+    expect(within(row).getByText("paid")).toBeInTheDocument();
+    expect(within(row).getByText("USDC + ETH")).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Amount (USD)"));
+    await user.type(screen.getByLabelText("Amount (USD)"), "25");
+    await user.type(screen.getByLabelText(/Description/), "Annual plan");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    const status = await screen.findByRole("status");
+    expect(status).toHaveTextContent("Payment for $25.00 created");
+    expect(status).toHaveTextContent(`/checkout/pay-2?key=pk_live_widgetwdgt`);
+    const post = fetchMock.mock.calls.find(([u, init]) => String(u).endsWith("/v1/payments") && init?.method === "POST")!;
+    expect(JSON.parse(String(post[1]!.body))).toEqual({ amount: "25", description: "Annual plan" });
+  });
+
+  it("saves the payout address in settings", async () => {
+    const user = userEvent.setup();
+    const fetchMock = signedIn({
+      "POST /v1/partners/me/payout": (_u, init) => ({ status: 200, body: JSON.parse(String(init.body)) }),
+    });
+    renderApp("/app/settings");
+    const input = await screen.findByLabelText("Payout address (ARC)");
+    await user.type(input, "0x12");
+    await user.click(screen.getByRole("button", { name: "Save address" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("0x address");
+    await user.clear(input);
+    await user.type(input, "0x00000000000000000000000000000000000000aa");
+    await user.click(screen.getByRole("button", { name: "Save address" }));
+    expect(await screen.findByText("Payout address saved.")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/v1/partners/me/payout"))).toBe(true);
   });
 });

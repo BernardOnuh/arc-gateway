@@ -9,6 +9,7 @@ import { Signup } from "./pages/marketing/Signup";
 import { NotFound } from "./pages/NotFound";
 
 const DashboardRoutes = lazy(() => import("./pages/app/DashboardRoutes"));
+const Checkout = lazy(() => import("./pages/Checkout").then((m) => ({ default: m.Checkout })));
 const AccountRoutes = lazy(() => import("./pages/account/AccountRoutes"));
 
 export function App() {
@@ -27,6 +28,14 @@ export function App() {
         element={
           <Suspense fallback={<div className="p-8 text-sm text-ink-600">Loading…</div>}>
             <DashboardRoutes />
+          </Suspense>
+        }
+      />
+      <Route
+        path="checkout/:paymentId"
+        element={
+          <Suspense fallback={<div className="p-8 text-sm text-ink-600">Loading…</div>}>
+            <Checkout />
           </Suspense>
         }
       />

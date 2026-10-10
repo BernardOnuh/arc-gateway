@@ -6,6 +6,7 @@ import { Overview } from "./Overview";
 import { Customers } from "./Customers";
 import { Transactions } from "./Transactions";
 import { Ledger } from "./Ledger";
+import { Payments } from "./Payments";
 import { Settings } from "./Settings";
 import { Widget } from "./Widget";
 import { NotFound } from "../NotFound";
@@ -25,6 +26,7 @@ export default function DashboardRoutes() {
         <Route index element={<Overview />} />
         <Route path="customers" element={<Customers />} />
         <Route path="transactions" element={<Transactions />} />
+        <Route path="payments" element={<Payments />} />
         <Route path="ledger" element={<Ledger />} />
         <Route path="widget" element={<Widget />} />
         <Route path="settings" element={<Settings />} />

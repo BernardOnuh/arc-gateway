@@ -86,6 +86,8 @@ export const profile = {
   partnerId: "p-1",
   name: "Acme Pay",
   email: "billing@acme.example",
+  hasPassword: true,
+  payoutAddress: null as string | null,
   feeBps: 10,
   rateLimitPerMin: 30,
   createdAt: "2026-10-08T00:00:00.000Z",

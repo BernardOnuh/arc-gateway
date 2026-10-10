@@ -284,7 +284,22 @@ export function ArcCheckout(props: ArcCheckoutProps) {
     }
 
     if (demo) {
-      const paid = { ...payment, status: "paid" as const, paidCents: payment.amountCents, remainingCents: 0, paidAt: new Date().toISOString() };
+      // Show the simulated legs on the receipt, like a real payment.
+      const legs: PaymentLeg[] = chosen.map((h, i) => ({
+        legId: `demo-${i}`,
+        quoteId: `demo-${i}`,
+        originChainId: h.chainId,
+        token: { symbol: h.token.symbol, address: h.token.address, decimals: h.token.decimals, isNative: h.token.isNative },
+        amountIn: amountForCents(h, alloc[h.key], slippageBps).toString(),
+        valueCents: alloc[h.key],
+        payer: account,
+        status: "EXECUTED_ON_ARC",
+        originTx: null,
+        destTx: null,
+        execution: { fromChain: null, toChain: null, tokenIn: h.token.symbol, tokenOut: "USDC", amountIn: "", recipientAddress: "", slippageBps },
+      }));
+      setChains(DEMO_HOLDINGS.map((d) => ({ id: d.chainId, name: d.chainName, isArc: false, testnet: false, explorerUrl: "" })));
+      const paid = { ...payment, legs, status: "paid" as const, paidCents: payment.amountCents, remainingCents: 0, paidAt: new Date().toISOString() };
       setPayment(paid);
       setView({ name: "done" });
       cb.current.onPaid?.(paid);

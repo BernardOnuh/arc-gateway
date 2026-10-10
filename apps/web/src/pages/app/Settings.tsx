@@ -1,5 +1,6 @@
 import { PublishableKeysCard, SecretKeyCard } from "../../components/dashboard/ApiKeys";
 import { PasswordCard } from "../../components/dashboard/PasswordCard";
+import { PayoutCard } from "../../components/dashboard/PayoutCard";
 import { Card, ErrorState, Loading, PageTitle } from "../../components/dashboard/ui";
 import { formatBps, formatDate } from "../../lib/format";
 import { usePartnerProfile } from "../../lib/queries";
@@ -44,12 +45,7 @@ export function Settings() {
           <SecretKeyCard />
           <PublishableKeysCard />
 
-          <Card title="Customer payouts">
-            <p className="text-sm text-ink-600">
-              Fees are tracked per customer in your ledger. Payouts to customer wallets aren't live yet; customers will
-              be able to set a payout wallet ahead of time.
-            </p>
-          </Card>
+          <PayoutCard payoutAddress={profile.data.payoutAddress} />
         </div>
       )}
     </>

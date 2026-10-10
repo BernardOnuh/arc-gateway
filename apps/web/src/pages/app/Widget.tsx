@@ -1,21 +1,21 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArcSwapWidget, normalizeAccent, type WidgetTheme } from "@arc/widget";
+import { ArcCheckout, normalizeAccent, type WidgetTheme } from "@arc/widget";
 import { CodeBlock } from "../../components/CodeBlock";
-import { Card, Empty, ErrorState, inputClass, Loading, PageTitle } from "../../components/dashboard/ui";
+import { Card, ErrorState, inputClass, Loading, PageTitle } from "../../components/dashboard/ui";
 import { Segmented } from "../../components/forms";
 import { GATEWAY_URL } from "../../lib/env";
-import { useApiKeys } from "../../lib/queries";
+import { useApiKeys, usePartnerProfile } from "../../lib/queries";
 
 interface Appearance {
   theme: WidgetTheme;
   accentColor: string;
   radius: number;
   title: string;
-  slippageBps: number;
+  showNetworkDetails: boolean;
 }
 
-const DEFAULTS: Appearance = { theme: "light", accentColor: "#1c1f3f", radius: 20, title: "Send to ARC", slippageBps: 50 };
+const DEFAULTS: Appearance = { theme: "light", accentColor: "#1c1f3f", radius: 20, title: "Pay", showNetworkDetails: false };
 
 const SWATCHES = [
   { name: "Navy", value: "#1c1f3f" },
@@ -39,27 +39,18 @@ const reactSnippet = (pk: string, a: Appearance) => {
   const lines = [
     `  publishableKey="${pk}"`,
     `  baseUrl="${GATEWAY_URL}"`,
+    `  paymentId={paymentId}   // from POST /v1/payments on your server`,
     ...(extra.theme ? [`  theme="${extra.theme}"`] : []),
     ...(extra.accentColor ? [`  accentColor="${extra.accentColor}"`] : []),
     ...(extra.radius !== undefined ? [`  radius={${extra.radius}}`] : []),
     ...(extra.title ? [`  title=${JSON.stringify(extra.title)}`] : []),
-    ...(extra.slippageBps !== undefined ? [`  slippageBps={${extra.slippageBps}}`] : []),
+    ...(extra.showNetworkDetails ? [`  showNetworkDetails`] : []),
   ];
-  return `import { ArcSwapWidget } from "@arc/widget";
+  return `import { ArcCheckout } from "@arc/widget";
 
-<ArcSwapWidget
+<ArcCheckout
 ${lines.join("\n")}
-  recipient={customer.walletAddress}   // optional: lock the receiving address
-  customerId={customer.arcCustomerId}   // optional: attribute revenue
-  submitIntent={(quote) =>
-    // Your server submits with your SECRET key (see below)
-    fetch("/api/arc/submit", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ quoteId: quote.quoteId }),
-    }).then((r) => r.json())
-  }
-  onIntent={(intent) => console.log("finished", intent.status)}
+  onPaid={(payment) => router.push(\`/thanks?order=\${payment.reference}\`)}
 />`;
 };
 
@@ -70,28 +61,23 @@ const scriptSnippet = (pk: string, a: Appearance) => {
   const attrs = [
     `  publishable-key="${pk}"`,
     `  base-url="${GATEWAY_URL}"`,
+    `  payment-id="PAYMENT_ID_FROM_YOUR_SERVER"`,
     ...(extra.theme ? [`  theme="${extra.theme}"`] : []),
     ...(extra.accentColor ? [`  accent-color="${extra.accentColor}"`] : []),
     ...(extra.radius !== undefined ? [`  radius="${extra.radius}"`] : []),
     ...(extra.title ? [`  title="${escapeAttr(extra.title)}"`] : []),
-    ...(extra.slippageBps !== undefined ? [`  slippage-bps="${extra.slippageBps}"`] : []),
+    ...(extra.showNetworkDetails ? [`  show-network-details`] : []),
   ];
-  return `<!-- Serve dist/standalone/arc-widget.iife.js from @arc/widget -->
-<script src="/arc-widget.iife.js"></script>
+  return `<!-- Module build: App Kit loads only when the customer pays -->
+<script type="module" src="/arc-widget.js"></script>
 
-<arc-swap-widget
+<arc-checkout
 ${attrs.join("\n")}
-></arc-swap-widget>
+></arc-checkout>
 
 <script>
-  const widget = document.querySelector("arc-swap-widget");
-  widget.submitIntent = (quote) =>
-    fetch("/api/arc/submit", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ quoteId: quote.quoteId }),
-    }).then((r) => r.json());
-  widget.addEventListener("arc-intent", (e) => console.log(e.detail.status));
+  document.querySelector("arc-checkout")
+    .addEventListener("arc-paid", (e) => location.assign("/thanks?order=" + e.detail.reference));
 </script>`;
 };
 
@@ -103,14 +89,18 @@ const gateway = new GatewayClient({
   apiKey: process.env.ARC_GATEWAY_KEY, // gw_live_…
 });
 
-app.post("/api/arc/submit", async (req, res) => {
-  // Authorize your signed-in user here before spending anything.
-  const { intentId } = await gateway.submitIntent({
-    quoteId: req.body.quoteId,
-    signedPayload: req.body.signedPayload ?? "0x",
+// When the customer reaches checkout, create the payment for your price:
+app.post("/api/checkout", async (req, res) => {
+  const payment = await gateway.createPayment({
+    amount: "10.00",
+    description: "Pro plan, 1 month",
+    reference: req.body.orderId,
   });
-  res.json({ intentId });
-});`;
+  res.json({ paymentId: payment.paymentId });
+});
+
+// Before fulfilling, confirm it's paid (never trust the browser alone):
+const { status } = await gateway.getPayment(paymentId); // "paid"`;
 
 type InstallTab = "react" | "script" | "server";
 type Stage = "light" | "dark";
@@ -219,7 +209,7 @@ function Controls({ value, onChange }: { value: Appearance; onChange: (a: Appear
         </div>
 
         <div>
-          <Label htmlFor="w-title">Heading</Label>
+          <Label htmlFor="w-title">Label above your name</Label>
           <input
             id="w-title"
             value={value.title}
@@ -229,18 +219,20 @@ function Controls({ value, onChange }: { value: Appearance; onChange: (a: Appear
           />
         </div>
 
-        <div>
-          <Label>Max slippage</Label>
-          <Segmented
-            label="Max slippage"
-            value={String(value.slippageBps)}
-            onChange={(v) => set("slippageBps", Number(v))}
-            options={[
-              { value: "10", label: "0.1%" },
-              { value: "50", label: "0.5%" },
-            ]}
+        <label className="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={value.showNetworkDetails}
+            onChange={(e) => set("showNetworkDetails", e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-[rgb(var(--ink-900))]"
           />
-        </div>
+          <span>
+            <span className="block font-medium text-ink-800">Show network details</span>
+            <span className="text-xs text-ink-600">
+              Off: customers just see "Payment complete". On: the receipt mentions USDC on ARC with explorer links.
+            </span>
+          </span>
+        </label>
       </div>
     </Card>
   );
@@ -248,44 +240,37 @@ function Controls({ value, onChange }: { value: Appearance; onChange: (a: Appear
 
 export function Widget() {
   const keys = useApiKeys();
+  const profile = usePartnerProfile();
   const publishable = keys.data?.items.filter((k) => k.kind === "publishable" && k.active && k.publishableKey) ?? [];
   const [selected, setSelected] = useState<string | null>(null);
   const [appearance, setAppearance] = useState<Appearance>(DEFAULTS);
-  const [tab, setTab] = useState<InstallTab>("react");
+  const [amount, setAmount] = useState("10.00");
+  const [tab, setTab] = useState<InstallTab>("server");
   const [stage, setStage] = useState<Stage>("light");
   const [device, setDevice] = useState<Device>("desktop");
+  const [run, setRun] = useState(0);
   const key = publishable.find((k) => k.id === selected) ?? publishable[0];
-  const origin = window.location.origin;
-  const previewAllowed = key?.allowedOrigins?.includes(origin) ?? false;
+  const pk = key?.publishableKey ?? "pk_live_…";
   const preview = { ...appearance, title: appearance.title.trim() || DEFAULTS.title };
+  const amountCents = Math.max(50, Math.round((Number(amount) || 0) * 100));
 
   return (
     <>
       <PageTitle
-        title="Widget"
-        intro="Drop a swap form into your site. Style it to match your brand; customers get a live quote with your fee and your server submits it."
+        title="Checkout"
+        intro="Customers pay your price with any mix of tokens from their wallet. Style the checkout to match your brand; it never asks them to think about networks."
       />
       {keys.isPending ? (
         <Loading />
       ) : keys.error ? (
         <ErrorState error={keys.error} onRetry={() => void keys.refetch()} />
-      ) : !key ? (
-        <Card>
-          <Empty>
-            The widget needs a publishable key.{" "}
-            <Link to="/app/settings" className="font-medium text-brand-600 hover:underline">
-              Create one in Settings
-            </Link>
-            .
-          </Empty>
-        </Card>
       ) : (
         <div className="space-y-6">
           {publishable.length > 1 && (
             <label className="flex flex-wrap items-center gap-2 text-sm text-ink-600">
               Publishable key
               <select
-                value={key.id}
+                value={key?.id}
                 onChange={(e) => setSelected(e.target.value)}
                 className="rounded-full border border-ink-900/10 bg-white px-3 py-2 font-mono text-xs"
               >
@@ -303,9 +288,26 @@ export function Widget() {
 
             <section className="card overflow-hidden">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-mist-100 px-6 py-4">
-                <h2 className="text-base">Live preview <span className="ml-1 text-xs font-normal text-ink-600">page background · device</span></h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-base">Live preview</h2>
+                  <label className="flex items-center gap-2 whitespace-nowrap text-xs text-ink-600">
+                    Price $
+                    <span className="block w-20">
+                      <input
+                        aria-label="Preview price"
+                        inputMode="decimal"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        className={`${inputClass} py-1.5 text-xs`}
+                      />
+                    </span>
+                  </label>
+                  <button type="button" className="text-xs font-medium text-ink-600 hover:text-ink-900" onClick={() => setRun((r) => r + 1)}>
+                    Restart
+                  </button>
+                </div>
                 <div className="flex gap-2">
-                  <div className="w-40">
+                  <div className="w-32">
                     <Segmented
                       label="Page background"
                       value={stage}
@@ -330,7 +332,7 @@ export function Widget() {
                 </div>
               </div>
               <div
-                className={`flex min-h-[38rem] items-start justify-center px-4 py-10 transition-colors ${
+                className={`flex min-h-[40rem] items-start justify-center px-4 py-10 transition-colors ${
                   stage === "dark" ? "bg-[#0b0f24]" : "bg-[#f4f5fb]"
                 }`}
                 style={{
@@ -338,39 +340,46 @@ export function Widget() {
                   backgroundSize: "18px 18px",
                 }}
               >
-                {previewAllowed ? (
-                  <div className="w-full transition-[max-width] duration-300" style={{ maxWidth: device === "mobile" ? 360 : 420 }}>
-                    <ArcSwapWidget publishableKey={key.publishableKey!} baseUrl={GATEWAY_URL} {...preview} />
-                    <p className={`mt-4 text-center text-xs ${stage === "dark" ? "text-[#9aa1cc]" : "text-[#555b88]"}`}>
-                      Real quotes from the gateway. Submission is off in this preview.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="max-w-sm rounded-3xl bg-white p-6 text-sm text-ink-600 shadow-soft">
-                    This key isn't allowed on <span className="font-mono">{origin}</span>, so the preview can't run here.
-                    Create a key that includes this origin in{" "}
-                    <Link to="/app/settings" className="font-medium text-brand-600 hover:underline">
-                      Settings
+                <div className="w-full transition-[max-width] duration-300" style={{ maxWidth: device === "mobile" ? 360 : 420 }}>
+                  <ArcCheckout
+                    key={`${run}-${amountCents}`}
+                    publishableKey={pk}
+                    demo={{ amountCents, merchantName: profile.data?.name ?? "Your business", description: "Pro plan, 1 month" }}
+                    {...preview}
+                  />
+                  <p className={`mt-4 text-center text-xs ${stage === "dark" ? "text-[#9aa1cc]" : "text-[#555b88]"}`}>
+                    Demo mode: a simulated wallet, nothing is charged. Try a real one from{" "}
+                    <Link to="/app/payments" className="font-medium underline">
+                      Payments
                     </Link>
                     .
-                  </div>
-                )}
+                  </p>
+                </div>
               </div>
             </section>
           </div>
 
           <Card title="Install">
+            {!key && (
+              <p role="note" className="mb-4 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
+                Create a publishable key for your website in{" "}
+                <Link to="/app/settings" className="font-semibold underline">
+                  Settings
+                </Link>{" "}
+                and it will appear in these snippets.
+              </p>
+            )}
             <div className="max-w-md">
               <Segmented3 value={tab} onChange={setTab} />
             </div>
             <div className="mt-5">
-              {tab === "react" && <CodeBlock title="React" code={reactSnippet(key.publishableKey!, preview)} />}
-              {tab === "script" && <CodeBlock title="Any site (script tag)" code={scriptSnippet(key.publishableKey!, preview)} />}
-              {tab === "server" && <CodeBlock title="Your server: submit endpoint" code={serverSnippet} />}
+              {tab === "server" && <CodeBlock title="1. Your server: create the payment" code={serverSnippet} />}
+              {tab === "react" && <CodeBlock title="2. React: show the checkout" code={reactSnippet(pk, preview)} />}
+              {tab === "script" && <CodeBlock title="2. Any site: show the checkout" code={scriptSnippet(pk, preview)} />}
             </div>
             <p className="mt-4 text-xs text-ink-600">
-              The snippets include the appearance you picked above. Publishable keys can quote and track, never submit:
-              your server submits with your secret key.
+              Payments settle in USDC to your payout address. The checkout loads the wallet tooling only when the customer
+              pays, and your secret key never reaches the browser.
             </p>
           </Card>
         </div>
@@ -381,9 +390,9 @@ export function Widget() {
 
 function Segmented3({ value, onChange }: { value: InstallTab; onChange: (v: InstallTab) => void }) {
   const opts: { value: InstallTab; label: string }[] = [
+    { value: "server", label: "Server" },
     { value: "react", label: "React" },
     { value: "script", label: "Script tag" },
-    { value: "server", label: "Server" },
   ];
   return (
     <div role="tablist" aria-label="Install method" className="grid grid-cols-3 gap-1 rounded-full bg-mist-200/80 p-1 text-sm">

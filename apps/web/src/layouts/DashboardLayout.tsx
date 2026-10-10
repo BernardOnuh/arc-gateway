@@ -12,6 +12,7 @@ import {
   IconSettings,
   IconSwap,
   IconUsers,
+  IconWallet,
   IconWidget,
 } from "../components/art";
 import { useAuth } from "../lib/auth";
@@ -19,10 +20,11 @@ import { usePartnerProfile } from "../lib/queries";
 
 const nav: { to: string; label: string; icon: ReactNode; end?: boolean }[] = [
   { to: "/app", label: "Overview", icon: <IconHome size={19} />, end: true },
+  { to: "/app/payments", label: "Payments", icon: <IconWallet size={19} /> },
   { to: "/app/customers", label: "Customers", icon: <IconUsers size={19} /> },
   { to: "/app/transactions", label: "Transactions", icon: <IconSwap size={19} /> },
   { to: "/app/ledger", label: "Ledger", icon: <IconChart size={19} /> },
-  { to: "/app/widget", label: "Widget", icon: <IconWidget size={19} /> },
+  { to: "/app/widget", label: "Checkout", icon: <IconWidget size={19} /> },
   { to: "/app/settings", label: "Settings", icon: <IconSettings size={19} /> },
 ];
 
