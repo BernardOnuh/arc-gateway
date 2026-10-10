@@ -97,7 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await sessionClient.openDashboardSession(creds);
       } catch (err) {
         if (err instanceof GatewayError) {
-          if (err.statusCode === 401 && !byKey) throw new LoginError("That email and password don't match.");
+          if (err.statusCode === 401) {
+            throw new LoginError(
+              byKey ? "That API key was not accepted. Check it and try again." : "That email and password don't match."
+            );
+          }
           if (err.statusCode === 429) throw new LoginError("Too many attempts. Wait 15 minutes and try again.");
           if (err.statusCode === 400 && byKey) {
             throw new LoginError("This key isn't linked to a partner account. Use the key from signup.");
