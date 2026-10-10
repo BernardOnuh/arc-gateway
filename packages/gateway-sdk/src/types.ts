@@ -1,6 +1,18 @@
 export interface RegisterPartnerParams {
   partnerName: string;
-  email?: string;
+  /** Contact and dashboard sign-in email. */
+  email: string;
+  /** Dashboard password, at least 10 characters. */
+  password: string;
+}
+
+/** Dashboard sign-in: email + password, or a secret key. */
+export type DashboardCredentials = { email: string; password: string } | { apiKey: string };
+
+export interface SetPasswordParams {
+  /** Required when a password is already set. */
+  currentPassword?: string;
+  newPassword: string;
 }
 
 export interface RegisterPartnerResult {
@@ -222,6 +234,8 @@ export interface PartnerProfile {
   partnerId: string;
   name: string;
   email: string | null;
+  /** Whether email + password sign-in is set up. */
+  hasPassword: boolean;
   feeBps: number;
   rateLimitPerMin: number;
   createdAt: string;

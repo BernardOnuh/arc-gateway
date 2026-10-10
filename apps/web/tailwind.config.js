@@ -20,9 +20,9 @@ export default {
         mist: scale("mist", [50, 100, 200, 300]),
       },
       fontFamily: {
-        sans: ["Inter Variable", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ["Inter Tight Variable", "Inter Tight", "Inter Variable", "ui-sans-serif", "sans-serif"],
-        mono: ["JetBrains Mono Variable", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        sans: ["Geist Variable", "Geist", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["Geist Variable", "Geist", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["Geist Mono Variable", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       backgroundImage: {
         "card-sheen": "var(--card-sheen)",
@@ -39,6 +39,11 @@ export default {
         float: { "0%,100%": { transform: "translateY(0)" }, "50%": { transform: "translateY(-8px)" } },
         twinkle: { "0%,100%": { opacity: "0.25" }, "50%": { opacity: "1" } },
         rise: { "0%": { opacity: "0", transform: "translateY(18px)" }, "100%": { opacity: "1", transform: "none" } },
+        packet: {
+          "0%": { transform: "translateX(-6px)", opacity: "0" },
+          "25%, 75%": { opacity: "1" },
+          "100%": { transform: "translateX(22px)", opacity: "0" },
+        },
       },
       animation: {
         drift: "drift 70s linear infinite",

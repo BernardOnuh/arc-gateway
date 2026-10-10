@@ -33,7 +33,7 @@ export function Section({
 export function PageHeader({ title, intro, eyebrow }: { title: string; intro?: ReactNode; eyebrow?: string }) {
   return (
     <header className="relative overflow-hidden text-snow">
-      <SkyBackdrop />
+      <SkyBackdrop fade parallax />
       <div className="relative mx-auto max-w-6xl px-4 pb-20 pt-36 text-center sm:pb-28 sm:pt-44">
         {eyebrow && <span className="eyebrow animate-rise">{eyebrow}</span>}
         <h1 className="mx-auto mt-5 max-w-3xl animate-rise text-5xl leading-[1.02] [animation-delay:80ms] sm:text-7xl">

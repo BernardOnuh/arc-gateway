@@ -2,7 +2,11 @@ import type { FastifyInstance } from "fastify";
 import { findActiveKey } from "../auth/apiKey.js";
 import {
   SESSION_COOKIE,
+  authenticatePartnerPassword,
+  clearPartnerLoginFailures,
   createPartnerSession,
+  partnerLoginLocked,
+  recordPartnerLoginFailure,
   deletePartnerSession,
   sessionCookieOptions,
 } from "../auth/partnerSession.js";
@@ -25,16 +29,31 @@ export async function dashboardSessionRoutes(app: FastifyInstance) {
         tags: ["partners"],
         summary: "Open a dashboard session",
         description:
-          "Exchanges a secret key for an httpOnly session cookie (arc_session, 7 days) so the dashboard never keeps the key in browser storage. Requests authenticated by the cookie must also send `x-arc-dashboard: 1`. Revoking the key ends its sessions; rotating moves the session to the new key.",
+          "Signs in with the business email + password, or with a secret key, and sets an httpOnly session cookie (arc_session, 7 days) so the dashboard never keeps a key in browser storage. 5 failed passwords per email in 15 minutes → 429. Requests authenticated by the cookie must also send `x-arc-dashboard: 1`. Revoking the key ends its sessions; rotating moves the session to the new key.",
         body: toJsonSchema(dashboardSessionCreateSchema),
-        response: { 200: toJsonSchema(dashboardSessionResponseSchema), 400: err, 401: err, 403: err },
+        response: { 200: toJsonSchema(dashboardSessionResponseSchema), 400: err, 401: err, 403: err, 429: err },
       },
     },
     async (request, reply) => {
       const parsed = dashboardSessionCreateSchema.safeParse(request.body);
       if (!parsed.success) return reply.code(400).send({ error: "invalid input" });
-      const key = await findActiveKey(parsed.data.apiKey.trim());
-      if (!key) return reply.code(401).send({ error: "unauthorized" });
+
+      let key;
+      if ("email" in parsed.data) {
+        const { email, password } = parsed.data;
+        if (await partnerLoginLocked(request, email)) {
+          return reply.code(429).send({ error: "too many attempts; wait 15 minutes" });
+        }
+        key = await authenticatePartnerPassword(email, password);
+        if (!key) {
+          await recordPartnerLoginFailure(request, email);
+          return reply.code(401).send({ error: "wrong email or password" });
+        }
+        await clearPartnerLoginFailures(request, email);
+      } else {
+        key = await findActiveKey(parsed.data.apiKey.trim());
+        if (!key) return reply.code(401).send({ error: "unauthorized" });
+      }
       if (key.kind !== "secret") {
         return reply.code(403).send({ error: "sign in with your secret key, not a publishable key" });
       }

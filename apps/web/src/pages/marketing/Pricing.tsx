@@ -19,17 +19,17 @@ export function Pricing() {
         <div className="grid gap-6 md:grid-cols-3">
           <div className="card p-7">
             <p className="text-sm font-medium uppercase tracking-wider text-ink-600">Transaction fee</p>
-            <p className="mt-2 text-6xl font-display font-semibold tracking-[-0.04em]">{formatBps(DEFAULT_FEE_BPS)}</p>
+            <p className="mt-2 text-6xl font-display font-semibold tracking-[-0.035em]">{formatBps(DEFAULT_FEE_BPS)}</p>
             <p className="mt-2 text-sm text-ink-600">{DEFAULT_FEE_BPS} basis points of the amount sent.</p>
           </div>
           <div className="card p-7">
             <p className="text-sm font-medium uppercase tracking-wider text-ink-600">API rate limit</p>
-            <p className="mt-2 text-6xl font-display font-semibold tracking-[-0.04em]">{DEFAULT_RATE_LIMIT_PER_MIN}</p>
+            <p className="mt-2 text-6xl font-display font-semibold tracking-[-0.035em]">{DEFAULT_RATE_LIMIT_PER_MIN}</p>
             <p className="mt-2 text-sm text-ink-600">requests per minute per key. Contact us for more.</p>
           </div>
           <div className="card p-7">
             <p className="text-sm font-medium uppercase tracking-wider text-ink-600">Setup</p>
-            <p className="mt-2 text-6xl font-display font-semibold tracking-[-0.04em]">$0</p>
+            <p className="mt-2 text-6xl font-display font-semibold tracking-[-0.035em]">$0</p>
             <p className="mt-2 text-sm text-ink-600">Self-serve signup, key issued instantly.</p>
           </div>
         </div>

@@ -1,9 +1,10 @@
 import type { CookieSerializeOptions } from "@fastify/cookie";
-import { and, eq, gt } from "drizzle-orm";
+import type { FastifyRequest } from "fastify";
+import { and, desc, eq, gt, sql } from "drizzle-orm";
 import { config } from "../config.js";
 import { db } from "../db/index.js";
-import { apiKeys, partnerSessions } from "../db/schema.js";
-import { generateToken, sha256 } from "./customer.js";
+import { apiKeys, partnerSessions, partners } from "../db/schema.js";
+import { dummyPasswordHash, generateToken, sha256, verifyPassword } from "./customer.js";
 
 export const SESSION_COOKIE = "arc_session";
 /**
@@ -51,4 +52,44 @@ export async function findPartnerSession(token: string) {
 
 export async function deletePartnerSession(token: string): Promise<void> {
   await db.delete(partnerSessions).where(eq(partnerSessions.tokenHash, sha256(token)));
+}
+
+/**
+ * Email + password sign-in. Returns the partner's newest active secret key
+ * (the session acts as it), or null. Unknown emails still pay for a scrypt
+ * verify so timing doesn't reveal which emails are registered.
+ */
+export async function authenticatePartnerPassword(email: string, password: string) {
+  const [partner] = await db
+    .select()
+    .from(partners)
+    .where(and(sql`lower(${partners.email}) = ${email}`, eq(partners.active, true)))
+    .limit(1);
+  const ok = await verifyPassword(password, partner?.passwordHash ?? (await dummyPasswordHash()));
+  if (!partner?.passwordHash || !ok) return null;
+  const [key] = await db
+    .select()
+    .from(apiKeys)
+    .where(and(eq(apiKeys.partnerId, partner.id), eq(apiKeys.kind, "secret"), eq(apiKeys.active, true)))
+    .orderBy(desc(apiKeys.createdAt))
+    .limit(1);
+  return key ?? null;
+}
+
+/** Same brute-force guard as customer login: 5 failures per email per 15 minutes, then 429. */
+const LOGIN_WINDOW_S = 15 * 60;
+const LOGIN_MAX_FAILURES = 5;
+const failureKey = (email: string) => `gateway:partner-login:${sha256(email)}`;
+
+export async function partnerLoginLocked(request: FastifyRequest, email: string): Promise<boolean> {
+  return Number(await request.server.redis.get(failureKey(email))) >= LOGIN_MAX_FAILURES;
+}
+
+export async function recordPartnerLoginFailure(request: FastifyRequest, email: string) {
+  const n = await request.server.redis.incr(failureKey(email));
+  if (n === 1) await request.server.redis.expire(failureKey(email), LOGIN_WINDOW_S);
+}
+
+export async function clearPartnerLoginFailures(request: FastifyRequest, email: string) {
+  await request.server.redis.del(failureKey(email));
 }

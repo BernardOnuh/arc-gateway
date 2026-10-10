@@ -163,13 +163,13 @@ export function Home() {
         <Section eyebrow="Pricing" title="Simple fee model">
           <div className="grid gap-6 lg:grid-cols-[1fr_1fr_1.2fr]">
             <div className="rounded-3xl bg-card-sheen p-8">
-              <p className="font-display text-6xl font-semibold tracking-[-0.045em]">{formatBps(DEFAULT_FEE_BPS)}</p>
+              <p className="font-display text-6xl font-semibold tracking-[-0.035em]">{formatBps(DEFAULT_FEE_BPS)}</p>
               <p className="mt-4 leading-relaxed text-ink-700">
                 per transaction, taken from the amount sent. Every quote shows the fee before your customer commits.
               </p>
             </div>
             <div className="rounded-3xl bg-mist-100 p-8">
-              <p className="font-display text-6xl font-semibold tracking-[-0.045em]">$0</p>
+              <p className="font-display text-6xl font-semibold tracking-[-0.035em]">$0</p>
               <p className="mt-4 leading-relaxed text-ink-700">
                 to sign up. No monthly minimum. Revenue per customer is in your dashboard.
               </p>

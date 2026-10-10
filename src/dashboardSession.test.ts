@@ -4,6 +4,7 @@ import { buildApp } from "./server.js";
 import { db } from "./db/index.js";
 import { apiKeys, partnerSessions, partners } from "./db/schema.js";
 import { generateApiKey } from "./auth/apiKey.js";
+import { hashPassword } from "./auth/customer.js";
 
 describe("dashboard session cookie", () => {
   let app: any;
@@ -12,10 +13,18 @@ describe("dashboard session cookie", () => {
   const suffix = Date.now();
   const DASH = "http://localhost:5173";
 
-  async function makePartner(name: string) {
+  const PASSWORD = "dashboard passphrase 1";
+
+  async function makePartner(name: string, withPassword = false) {
     const [p] = await db
       .insert(partners)
-      .values({ name, email: `${name}-${suffix}@test.local`, feeBps: 10, rateLimitPerMin: 100 })
+      .values({
+        name,
+        email: `${name}-${suffix}@test.local`,
+        passwordHash: withPassword ? await hashPassword(PASSWORD) : null,
+        feeBps: 10,
+        rateLimitPerMin: 100,
+      })
       .returning({ id: partners.id });
     const k = generateApiKey();
     await db.insert(apiKeys).values({
@@ -175,6 +184,65 @@ describe("dashboard session cookie", () => {
 
     // Signed-out logout is a no-op.
     expect((await app.inject({ method: "POST", url: "/v1/dashboard/session/logout" })).statusCode).toBe(200);
+  });
+
+  describe("email + password", () => {
+    const login = (email: string, password: string) =>
+      app.inject({ method: "POST", url: "/v1/dashboard/session", body: { email, password } });
+
+    it("signs in with the business email (any case) and password", async () => {
+      const p = await makePartner("sess-pw", true);
+      const res = await login(`SESS-PW-${suffix}@TEST.LOCAL`, PASSWORD);
+      expect(res.statusCode).toBe(200);
+      const profile = await me(sessionCookie(res));
+      expect(profile.json().partnerId).toBe(p.partnerId);
+      expect(profile.json().hasPassword).toBe(true);
+    });
+
+    it("gives the same answer for a wrong password and an unknown email, then locks after 5 failures", async () => {
+      await makePartner("sess-lock", true);
+      const email = `sess-lock-${suffix}@test.local`;
+      const unknown = await login(`nobody-${suffix}@test.local`, PASSWORD);
+      expect(unknown.statusCode).toBe(401);
+      for (let i = 0; i < 5; i++) {
+        const res = await login(email, "wrong password!");
+        expect(res.statusCode).toBe(401);
+        expect(res.json().error).toBe(unknown.json().error);
+      }
+      expect((await login(email, PASSWORD)).statusCode).toBe(429);
+      await app.redis.del(...(await app.redis.keys("gateway:partner-login:*")));
+    });
+
+    it("lets a key-only partner set a password, then requires the current one to change it", async () => {
+      const p = await makePartner("sess-setpw");
+      const email = `sess-setpw-${suffix}@test.local`;
+      expect((await login(email, PASSWORD)).statusCode).toBe(401);
+      const auth = { authorization: `Bearer ${p.rawKey}` };
+      const set = await app.inject({
+        method: "POST",
+        url: "/v1/partners/me/password",
+        headers: auth,
+        body: { newPassword: PASSWORD },
+      });
+      expect(set.statusCode).toBe(200);
+      expect((await login(email, PASSWORD)).statusCode).toBe(200);
+
+      const noCurrent = await app.inject({
+        method: "POST",
+        url: "/v1/partners/me/password",
+        headers: auth,
+        body: { newPassword: "another passphrase 2" },
+      });
+      expect(noCurrent.statusCode).toBe(403);
+      const changed = await app.inject({
+        method: "POST",
+        url: "/v1/partners/me/password",
+        headers: auth,
+        body: { currentPassword: PASSWORD, newPassword: "another passphrase 2" },
+      });
+      expect(changed.statusCode).toBe(200);
+      expect((await login(email, "another passphrase 2")).statusCode).toBe(200);
+    });
   });
 
   it("prefers the bearer key over the cookie", async () => {

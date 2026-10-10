@@ -572,7 +572,7 @@ describe("partner onboarding, customers and ledger", () => {
     const res = await app.inject({
       method: "POST",
       url: "/v1/partners",
-      body: { partnerName: "Acme Pay", email },
+      body: { partnerName: "Acme Pay", email, password: "correct horse battery" },
     });
     expect(res.statusCode).toBe(201);
     const data = res.json();
@@ -589,7 +589,7 @@ describe("partner onboarding, customers and ledger", () => {
     const res = await app.inject({
       method: "POST",
       url: "/v1/partners",
-      body: { partnerName: "Acme Dupe", email },
+      body: { partnerName: "Acme Dupe", email: email.toUpperCase(), password: "correct horse battery" },
     });
     expect(res.statusCode).toBe(409);
   });
@@ -601,6 +601,26 @@ describe("partner onboarding, customers and ledger", () => {
       body: { partnerName: "" },
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it("requires an email and a password of at least 10 characters at signup", async () => {
+    // Signup is limited to 5/min per IP; this suite signs up several times.
+    const rl = await app.redis.keys("gateway-rl*");
+    if (rl.length) await app.redis.del(...rl);
+    const noEmail = await app.inject({
+      method: "POST",
+      url: "/v1/partners",
+      body: { partnerName: "No Email Co", password: "correct horse battery" },
+    });
+    expect(noEmail.statusCode).toBe(400);
+    expect(noEmail.json().error).toMatch(/email/);
+    const shortPw = await app.inject({
+      method: "POST",
+      url: "/v1/partners",
+      body: { partnerName: "Short Pw Co", email: `short-${email}`, password: "short" },
+    });
+    expect(shortPw.statusCode).toBe(400);
+    expect(shortPw.json().error).toMatch(/at least 10 characters/);
   });
 
   it("registers an end customer", async () => {
@@ -715,7 +735,7 @@ describe("partner onboarding, customers and ledger", () => {
     const other = await app.inject({
       method: "POST",
       url: "/v1/partners",
-      body: { partnerName: "Another Co", email: email2 },
+      body: { partnerName: "Another Co", email: email2, password: "correct horse battery" },
     });
     expect(other.statusCode).toBe(201);
     const otherKey = other.json().apiKey;

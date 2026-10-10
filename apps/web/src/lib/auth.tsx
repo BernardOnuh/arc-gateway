@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { GatewayError, type GatewayClient, type PartnerProfile } from "@arc/gateway-sdk";
+import { GatewayError, type DashboardCredentials, type GatewayClient, type PartnerProfile } from "@arc/gateway-sdk";
 import { sessionClient } from "./gateway";
 import { readStored, writeStored } from "./storage";
 
@@ -30,9 +30,15 @@ interface AuthState {
   /** Signed-in partner; scopes cached queries so accounts never share data. */
   partnerId: string | null;
   client: GatewayClient;
-  /** Opens a session with the key, loads the profile, and signs in. */
-  login: (apiKey: string) => Promise<PartnerProfile>;
+  /** Opens a session (email + password, or a secret key), loads the profile, and signs in. */
+  login: (credentials: DashboardCredentials) => Promise<PartnerProfile>;
   logout: () => void;
+  /**
+   * A secret key the dashboard must show once (just after signup). Memory
+   * only: a reload drops it, and the partner can rotate from Settings.
+   */
+  revealKey: string | null;
+  setRevealKey: (key: string | null) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -43,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<AuthStatus>("checking");
   const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [revealKey, setRevealKey] = useState<string | null>(null);
   // A logout still in flight could clear a cookie set by a quick re-login.
   const pendingLogout = useRef<Promise<unknown>>(Promise.resolve());
 
@@ -76,18 +83,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [signIn]);
 
   const login = useCallback(
-    async (rawKey: string) => {
-      const key = rawKey.trim();
-      if (!key) throw new LoginError("Enter your API key.");
+    async (credentials: DashboardCredentials) => {
+      const byKey = "apiKey" in credentials;
+      const creds: DashboardCredentials = byKey
+        ? { apiKey: credentials.apiKey.trim() }
+        : { email: credentials.email.trim(), password: credentials.password };
+      if ("apiKey" in creds && !creds.apiKey) throw new LoginError("Enter your API key.");
+      if ("email" in creds && (!creds.email || !creds.password)) throw new LoginError("Enter your email and password.");
       await pendingLogout.current;
       try {
-        await sessionClient.openDashboardSession(key);
+        await sessionClient.openDashboardSession(creds);
       } catch (err) {
-        if (err instanceof GatewayError && err.statusCode === 400) {
-          throw new LoginError("This key isn't linked to a partner account. Use the key from signup.");
-        }
-        if (err instanceof GatewayError && err.statusCode === 403) {
-          throw new LoginError("That's a publishable key. Sign in with your secret key (gw_live_…).");
+        if (err instanceof GatewayError) {
+          if (err.statusCode === 401 && !byKey) throw new LoginError("That email and password don't match.");
+          if (err.statusCode === 429) throw new LoginError("Too many attempts. Wait 15 minutes and try again.");
+          if (err.statusCode === 400 && byKey) {
+            throw new LoginError("This key isn't linked to a partner account. Use the key from signup.");
+          }
+          if (err.statusCode === 403) {
+            throw new LoginError("That's a publishable key. Sign in with your secret key (gw_live_…).");
+          }
         }
         throw err;
       }
@@ -102,13 +117,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setStatus("signedOut");
     setPartnerId(null);
+    setRevealKey(null);
     queryClient.clear();
     pendingLogout.current = sessionClient.closeDashboardSession().catch(() => undefined);
   }, [queryClient]);
 
   const value = useMemo<AuthState>(
-    () => ({ status, partnerId, client: sessionClient, login, logout }),
-    [status, partnerId, login, logout]
+    () => ({ status, partnerId, client: sessionClient, login, logout, revealKey, setRevealKey }),
+    [status, partnerId, login, logout, revealKey]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

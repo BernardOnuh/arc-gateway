@@ -18,6 +18,8 @@ export const partners = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
     email: text("email"),
+    /** scrypt hash for dashboard sign-in; null for partners created before passwords (they use the API key). */
+    passwordHash: text("password_hash"),
     feeBps: integer("fee_bps").notNull(),
     rateLimitPerMin: integer("rate_limit_per_min").notNull(),
     active: boolean("active").notNull().default(true),

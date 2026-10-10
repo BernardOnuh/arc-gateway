@@ -5,7 +5,9 @@ import type {
   CreatePublishableKeyParams,
   CreateCustomerParams,
   Customer,
+  DashboardCredentials,
   DashboardSession,
+  SetPasswordParams,
   Intent,
   IntentListItem,
   Ledger,
@@ -113,9 +115,15 @@ export class GatewayClient {
     return this.request("POST", "/v1/partners", { body: params, skipAuth: true });
   }
 
-  /** Exchanges a secret key for an httpOnly session cookie (browser dashboards). */
-  openDashboardSession(apiKey: string): Promise<DashboardSession> {
-    return this.request("POST", "/v1/dashboard/session", { body: { apiKey }, skipAuth: true });
+  /** Signs in to the dashboard (email + password, or a secret key) and sets an httpOnly session cookie. */
+  openDashboardSession(credentials: DashboardCredentials | string): Promise<DashboardSession> {
+    const body = typeof credentials === "string" ? { apiKey: credentials } : credentials;
+    return this.request("POST", "/v1/dashboard/session", { body, skipAuth: true });
+  }
+
+  /** Sets or changes the dashboard password of the authenticated business. */
+  setPassword(params: SetPasswordParams, apiKey?: string): Promise<{ ok: true }> {
+    return this.request("POST", "/v1/partners/me/password", { body: params, apiKey });
   }
 
   closeDashboardSession(): Promise<{ ok: true }> {

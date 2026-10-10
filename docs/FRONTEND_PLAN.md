@@ -374,7 +374,9 @@ SDK: `client.listCustomers()`, `client.listQuotes()`, `client.listIntents()`, `c
 
 | Method | Path | Notes |
 |---|---|---|
-| `POST` | `/v1/dashboard/session` | Body `{ apiKey }` (secret key). Sets `arc_session` (httpOnly, SameSite=Lax by default, Secure in production, 7 days), returns `{ expiresAt }`. `401` bad key, `403` publishable key, `400` legacy key. 10/min/IP. |
+| `POST` | `/v1/partners` | Body `{ partnerName, email, password }`. Email and a password of 10+ characters are required; the password is stored as a salted scrypt hash. Returns the one-time `apiKey`; the dashboard shows it once after signup instead of the signup page. |
+| `POST` | `/v1/partners/me/password` | `{ currentPassword?, newPassword }`. Sets the dashboard password (key-only partners) or changes it (current password required). |
+| `POST` | `/v1/dashboard/session` | Body `{ email, password }` or `{ apiKey }` (secret key). Wrong email/password → generic `401`; 5 failures per email in 15 min → `429`. Sets `arc_session` (httpOnly, SameSite=Lax by default, Secure in production, 7 days), returns `{ expiresAt }`. `401` bad key, `403` publishable key, `400` legacy key. 10/min/IP. |
 | `POST` | `/v1/dashboard/session/logout` | Deletes the session and clears the cookie. Safe when signed out. |
 
 Every `requireApiKey` route accepts the cookie in place of a bearer key, but only with `x-arc-dashboard: 1` (CSRF guard: cross-site pages can't add it without a preflight that only `CORS_ORIGINS` passes); a bearer header always wins. Only the sha256 of the `ps_` token is stored (`partner_sessions`). A session acts as the key it was opened with: revoking that key ends it, and rotating from the dashboard moves it to the new key. Env: `SESSION_COOKIE_SECURE`, `SESSION_COOKIE_SAMESITE` (`none` requires Secure, for a dashboard on a different site).

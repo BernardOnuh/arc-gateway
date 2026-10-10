@@ -1,4 +1,4 @@
-import Fastify, { type RouteOptions } from "fastify";
+import Fastify, { type FastifyError, type RouteOptions } from "fastify";
 import { Redis } from "ioredis";
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
@@ -42,6 +42,23 @@ export async function buildApp() {
   const app = Fastify({
     logger: config.isTest ? false : { level: config.logLevel },
     ajv: { customOptions: { strict: false } },
+  });
+
+  // Schema validation failures answer like every other error: { error: "<readable reason>" }.
+  app.setErrorHandler((err: FastifyError, _request, reply) => {
+    if (err.validation) {
+      const first = err.validation[0];
+      const params = (first?.params ?? {}) as { missingProperty?: string; limit?: number };
+      const field = params.missingProperty ?? first?.instancePath.replace(/^\//, "") ?? "";
+      let error = "invalid input";
+      if (params.missingProperty) error = `${field} is required`;
+      else if (first?.keyword === "minLength" && field) error = `${field} must be at least ${params.limit} characters`;
+      else if (field) error = `${field} ${first?.message ?? "is invalid"}`;
+      return reply.code(400).send({ error });
+    }
+    // Everything else keeps its own status (429 from the rate limiter, 500 otherwise).
+    reply.code(err.statusCode && err.statusCode >= 400 ? err.statusCode : 500);
+    return reply.send(err);
   });
 
   const endpoints: EndpointInfo[] = [];

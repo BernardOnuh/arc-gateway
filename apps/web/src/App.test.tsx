@@ -2,7 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LEGACY_API_KEY_STORAGE } from "./lib/auth";
-import { gatewaySession, mockGateway, profile, renderApp, startSession } from "./test/render";
+import { gatewayAccounts, gatewaySession, mockGateway, profile, renderApp, startSession } from "./test/render";
 
 const GOOD_KEY = "gw_live_good";
 
@@ -63,11 +63,38 @@ function expectKeyNeverExposed(fetchMock: ReturnType<typeof mockGateway>) {
   expect(Object.values({ ...window.localStorage })).not.toContain(GOOD_KEY);
 }
 
+describe("email + password login", () => {
+  it("is the default and signs in with the business email", async () => {
+    const fetchMock = gatewayWithKey();
+    gatewayAccounts.set("billing@acme.example", { password: "correct horse battery", apiKey: GOOD_KEY });
+    renderApp("/app");
+    await userEvent.type(await screen.findByLabelText("Email"), "billing@acme.example");
+    await userEvent.type(screen.getByLabelText("Password"), "correct horse battery");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByText("Fee 0.10% · 30 requests/min")).toBeInTheDocument();
+    const open = fetchMock.mock.calls.find(([u]) => String(u) === "http://localhost:3000/v1/dashboard/session")!;
+    expect(JSON.parse(String(open[1]!.body))).toEqual({ email: "billing@acme.example", password: "correct horse battery" });
+    expectKeyNeverExposed(fetchMock);
+  });
+
+  it("says when the email and password don't match", async () => {
+    gatewayWithKey();
+    gatewayAccounts.set("billing@acme.example", { password: "correct horse battery", apiKey: GOOD_KEY });
+    renderApp("/app/login");
+    await userEvent.type(await screen.findByLabelText("Email"), "billing@acme.example");
+    await userEvent.type(screen.getByLabelText("Password"), "wrong password!!");
+    await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("don't match");
+    expect(gatewaySession.key).toBeNull();
+  });
+});
+
 describe("api-key login", () => {
   it("exchanges the key for a session cookie and returns to the page that was requested", async () => {
     const fetchMock = gatewayWithKey();
     renderApp("/app/customers");
-    await userEvent.type(await screen.findByLabelText("API key"), `  ${GOOD_KEY}  `);
+    await userEvent.click(await screen.findByRole("tab", { name: "API key" }));
+    await userEvent.type(screen.getByLabelText("API key"), `  ${GOOD_KEY}  `);
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
     expect(await screen.findByRole("heading", { level: 1, name: "Customers" })).toBeInTheDocument();
@@ -82,7 +109,8 @@ describe("api-key login", () => {
   it("rejects a wrong key without opening a session", async () => {
     gatewayWithKey();
     renderApp("/app/login");
-    await userEvent.type(await screen.findByLabelText("API key"), "gw_live_wrong");
+    await userEvent.click(await screen.findByRole("tab", { name: "API key" }));
+    await userEvent.type(screen.getByLabelText("API key"), "gw_live_wrong");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("not accepted");
     expect(gatewaySession.key).toBeNull();
@@ -91,7 +119,8 @@ describe("api-key login", () => {
   it("explains legacy keys that are not linked to a partner", async () => {
     gatewayWithKey();
     renderApp("/app/login");
-    await userEvent.type(await screen.findByLabelText("API key"), "gw_live_legacy");
+    await userEvent.click(await screen.findByRole("tab", { name: "API key" }));
+    await userEvent.type(screen.getByLabelText("API key"), "gw_live_legacy");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("isn't linked to a partner");
   });
@@ -101,7 +130,8 @@ describe("api-key login", () => {
       throw new TypeError("Failed to fetch");
     }));
     renderApp("/app/login");
-    await userEvent.type(await screen.findByLabelText("API key"), GOOD_KEY);
+    await userEvent.click(await screen.findByRole("tab", { name: "API key" }));
+    await userEvent.type(screen.getByLabelText("API key"), GOOD_KEY);
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Can't reach the gateway");
   });

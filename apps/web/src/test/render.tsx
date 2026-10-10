@@ -24,6 +24,9 @@ type Handler = (url: URL, init: RequestInit) => { status: number; body: unknown 
  */
 export const gatewaySession: { key: string | null } = { key: null };
 
+/** Email + password accounts the fake gateway accepts, each standing for a secret key. */
+export const gatewayAccounts = new Map<string, { password: string; apiKey: string }>();
+
 /** Start a test already signed in, as if the cookie survived a reload. */
 export function startSession(key: string) {
   gatewaySession.key = key;
@@ -45,11 +48,17 @@ export function mockGateway(handler: Handler) {
 function route(url: URL, init: RequestInit, handler: Handler): { status: number; body: unknown } {
   const method = init.method ?? "GET";
   if (method === "POST" && url.pathname === "/v1/dashboard/session") {
-    const { apiKey } = JSON.parse(String(init.body)) as { apiKey: string };
+    const body = JSON.parse(String(init.body)) as { apiKey?: string; email?: string; password?: string };
+    let apiKey = body.apiKey;
+    if (body.email !== undefined) {
+      const account = gatewayAccounts.get(body.email.toLowerCase());
+      if (!account || account.password !== body.password) return { status: 401, body: { error: "wrong email or password" } };
+      apiKey = account.apiKey;
+    }
     // The gateway accepts exactly the keys /me would accept.
     const check = handler(new URL("/v1/partners/me", url), { headers: { authorization: `Bearer ${apiKey}` } });
     if (check.status !== 200) return check;
-    gatewaySession.key = apiKey;
+    gatewaySession.key = apiKey ?? null;
     return { status: 200, body: { expiresAt: "2026-10-17T00:00:00.000Z" } };
   }
   if (method === "POST" && url.pathname === "/v1/dashboard/session/logout") {

@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { GatewayError } from "@arc/gateway-sdk";
 import { Logo } from "../components/Logo";
+import { NewKeyDialog } from "../components/dashboard/NewKeyDialog";
 import { ThemeToggle } from "../components/ThemeToggle";
 import {
   IconBook,
@@ -39,6 +40,7 @@ export function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-mist-200 md:flex">
+      <NewKeyDialog />
       <aside className="md:sticky md:top-0 md:flex md:h-screen md:w-64 md:shrink-0 md:flex-col">
         <div className="px-6 py-6">
           <Logo to="/app" />

@@ -49,9 +49,13 @@ export const quoteBodySchema = z.object({
     ),
 });
 
+const emailSchema = z.string().trim().toLowerCase().email().max(254);
+const newPasswordSchema = z.string().min(10, "password must be at least 10 characters").max(200);
+
 export const partnerCreateSchema = z.object({
-  partnerName: z.string().min(1).max(120).describe("Business name, appears on dashboard/revenue."),
-  email: z.string().email().optional().describe("Optional contact email, unique per partner."),
+  partnerName: z.string().trim().min(1).max(120).describe("Business name, appears on dashboard/revenue."),
+  email: emailSchema.describe("Contact and sign-in email, unique per partner."),
+  password: newPasswordSchema.describe("Dashboard password, at least 10 characters. Stored as a salted scrypt hash."),
 });
 
 export const partnerResponseSchema = z.object({
@@ -284,6 +288,7 @@ export const partnerProfileResponseSchema = z.object({
   partnerId: z.string(),
   name: z.string(),
   email: z.string().nullable(),
+  hasPassword: z.boolean().describe("Whether email + password sign-in is set up."),
   feeBps: z.number().int().describe("Fee charged on quotes made with this key, in basis points."),
   rateLimitPerMin: z.number().int().describe("Authenticated requests allowed per minute for this key."),
   createdAt: z.string(),
@@ -345,8 +350,19 @@ export const apiKeyRevokeSchema = z.object({
 
 // ----- dashboard session -----
 
-export const dashboardSessionCreateSchema = z.object({
-  apiKey: z.string().min(1).max(200).describe("Your secret key (gw_live_...). It is exchanged for a cookie and not stored."),
+export const dashboardSessionCreateSchema = z.union([
+  z.object({
+    email: emailSchema,
+    password: z.string().min(1).max(200),
+  }),
+  z.object({
+    apiKey: z.string().min(1).max(200).describe("Your secret key (gw_live_...). It is exchanged for a cookie and not stored."),
+  }),
+]);
+
+export const partnerPasswordSchema = z.object({
+  currentPassword: z.string().max(200).optional().describe("Required when a password is already set."),
+  newPassword: newPasswordSchema,
 });
 
 export const dashboardSessionResponseSchema = z.object({
@@ -356,8 +372,6 @@ export const dashboardSessionResponseSchema = z.object({
 // ----- customer accounts -----
 
 const passwordSchema = z.string().min(10, "password must be at least 10 characters").max(200);
-const emailSchema = z.string().trim().toLowerCase().email().max(254);
-
 export const setupLinkResponseSchema = z.object({
   customerId: z.string(),
   token: z.string().describe("One-time setup token (cst_…). Put it in a link for the customer; it is shown once."),

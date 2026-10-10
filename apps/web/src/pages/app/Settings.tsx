@@ -1,4 +1,5 @@
 import { PublishableKeysCard, SecretKeyCard } from "../../components/dashboard/ApiKeys";
+import { PasswordCard } from "../../components/dashboard/PasswordCard";
 import { Card, ErrorState, Loading, PageTitle } from "../../components/dashboard/ui";
 import { formatBps, formatDate } from "../../lib/format";
 import { usePartnerProfile } from "../../lib/queries";
@@ -39,6 +40,7 @@ export function Settings() {
             </dl>
           </Card>
 
+          <PasswordCard hasPassword={profile.data.hasPassword} email={profile.data.email} />
           <SecretKeyCard />
           <PublishableKeysCard />
 

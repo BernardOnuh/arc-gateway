@@ -65,12 +65,13 @@
     text-rendering: optimizeLegibility;
   }
   body {
-    @apply bg-mist-100 font-sans text-ink-900 transition-colors duration-500;
+    @apply bg-mist-100 font-sans text-[15px] text-ink-900 transition-colors duration-500;
+    font-feature-settings: "ss01", "cv11";
   }
   h1,
   h2,
   h3 {
-    @apply font-display font-semibold tracking-[-0.035em];
+    @apply font-display font-semibold tracking-[-0.025em];
   }
   ::selection {
     @apply bg-brand-200 text-ink-900;

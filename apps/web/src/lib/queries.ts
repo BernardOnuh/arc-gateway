@@ -120,3 +120,12 @@ export function useCreateSetupLink() {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["customers", scope] }),
   });
 }
+
+export function useSetPassword() {
+  const { client, scope } = useGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { currentPassword?: string; newPassword: string }) => client.setPassword(params),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["me", scope] }),
+  });
+}

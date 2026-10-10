@@ -43,6 +43,13 @@
       "when": 1791598489135,
       "tag": "0005_outgoing_sandman",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791606942884,
+      "tag": "0006_goofy_trauma",
+      "breakpoints": true
     }
   ]
 }

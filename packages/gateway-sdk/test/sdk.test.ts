@@ -27,12 +27,12 @@ const ok = (body: unknown) => (_c: Call, _u: string, _i: any) => ({ status: 200,
 describe("GatewayClient", () => {
   it("registerPartner posts to /v1/partners without auth", async () => {
     const { client, calls } = makeClient(ok({ partnerId: "p1", apiKey: "gw_live_abc", keyPrefix: "gw_live_", feeBps: 10, rateLimitPerMin: 30 }));
-    const res = await client.registerPartner({ partnerName: "Acme Pay", email: "a@b.c" });
+    const res = await client.registerPartner({ partnerName: "Acme Pay", email: "a@b.c", password: "long passphrase" });
     expect(res.partnerId).toBe("p1");
     expect(calls[0].url).toBe("http://gw.test/v1/partners");
     expect(calls[0].init.method).toBe("POST");
     expect(calls[0].init.headers["authorization"]).toBeUndefined();
-    expect(JSON.parse(calls[0].init.body!)).toEqual({ partnerName: "Acme Pay", email: "a@b.c" });
+    expect(JSON.parse(calls[0].init.body!)).toEqual({ partnerName: "Acme Pay", email: "a@b.c", password: "long passphrase" });
   });
 
   it("quote sends the client api key as a Bearer token and parses the response", async () => {
@@ -191,9 +191,11 @@ describe("GatewayClient", () => {
 
     await client.me();
     expect(calls[1].init.headers!["authorization"]).toBeUndefined();
+    await client.openDashboardSession({ email: "a@b.c", password: "long passphrase" });
+    expect(JSON.parse(calls[2].init.body!)).toEqual({ email: "a@b.c", password: "long passphrase" });
     await client.closeDashboardSession();
-    expect(calls[2].url).toBe("http://gw.test/v1/dashboard/session/logout");
-    expect(calls[2].init.method).toBe("POST");
+    expect(calls[3].url).toBe("http://gw.test/v1/dashboard/session/logout");
+    expect(calls[3].init.method).toBe("POST");
   });
 
   it("default fetch is called without the client bound as this", async () => {
