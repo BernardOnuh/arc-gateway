@@ -8,11 +8,18 @@ import { db } from "../db/index.js";
 import { customers, intents, partners, paymentLegs, payments, quotes } from "../db/schema.js";
 import { refreshIntent, type IntentRow } from "../intentStatus.js";
 import { referencePriceUsd, usdcToCents } from "../pricing.js";
-import { canRouteFrom, NoLiquidityError } from "../providers/arcSwap.js";
+import { APP_KIT_CHAINS, canRouteFrom, NoLiquidityError } from "../providers/arcSwap.js";
 import { quoteProvider } from "../providers/index.js";
 import type { UpstreamQuote } from "../providers/types.js";
 import { errorResponseSchema, toJsonSchema } from "../schemas.js";
 import { getTokens, resolveToken } from "../tokens.js";
+
+function toHuman(amount: string, decimals: number): string {
+  const raw = BigInt(amount);
+  const base = 10n ** BigInt(decimals);
+  const frac = (raw % base).toString().padStart(decimals, "0").replace(/0+$/, "");
+  return `${raw / base}${frac ? `.${frac}` : ""}`;
+}
 
 const address = z.string().regex(/^0x[0-9a-fA-F]{40}$/, "must be a 0x address");
 
@@ -124,7 +131,13 @@ async function rollUp(payment: PaymentRow, refresh = true): Promise<{ payment: P
 }
 
 function legView({ leg, quote, intent }: LegView) {
-  const req = quote.request as { originChainId: number; tokenIn: string };
+  const req = quote.request as {
+    originChainId: number;
+    destChainId: number;
+    tokenIn: string;
+    recipient: string;
+    slippageBps: number;
+  };
   const resp = (quote.response ?? {}) as Partial<UpstreamQuote>;
   const token = resolveToken(req.originChainId, req.tokenIn);
   return {
@@ -143,6 +156,19 @@ function legView({ leg, quote, intent }: LegView) {
     status: intent?.status ?? "QUOTED",
     originTx: intent?.originTx ?? null,
     destTx: intent?.destTx ?? null,
+    /**
+     * Everything the customer's wallet needs to run this swap with Circle
+     * App Kit (kit.swap): chain aliases, token alias, human amount, recipient.
+     */
+    execution: {
+      fromChain: APP_KIT_CHAINS[req.originChainId] ?? null,
+      toChain: APP_KIT_CHAINS[req.destChainId] ?? null,
+      tokenIn: token?.isNative ? "NATIVE" : (token?.symbol ?? req.tokenIn),
+      tokenOut: "USDC",
+      amountIn: toHuman(quote.amountIn, token?.decimals ?? 18),
+      recipientAddress: req.recipient,
+      slippageBps: req.slippageBps,
+    },
   };
 }
 

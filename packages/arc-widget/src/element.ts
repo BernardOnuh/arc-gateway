@@ -1,6 +1,8 @@
 import { createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { ArcSwapWidget } from "./ArcSwapWidget.js";
+import { ArcCheckout } from "./checkout/ArcCheckout.js";
+import type { ArcCheckoutProps } from "./checkout/types.js";
 import type { ArcSwapWidgetProps, WidgetQuote } from "./types.js";
 
 const ATTRS = [
@@ -95,5 +97,76 @@ export class ArcSwapWidgetElement extends HTMLElement {
 export function defineArcSwapWidget(tagName = "arc-swap-widget") {
   if (typeof customElements !== "undefined" && !customElements.get(tagName)) {
     customElements.define(tagName, class extends ArcSwapWidgetElement {});
+  }
+}
+
+const CHECKOUT_ATTRS = [
+  "publishable-key",
+  "base-url",
+  "payment-id",
+  "theme",
+  "accent-color",
+  "radius",
+  "title",
+  "show-network-details",
+] as const;
+
+/**
+ * <arc-checkout publishable-key="pk_live_…" payment-id="…" base-url="https://gateway…">
+ *
+ * Events: arc-paid, arc-status (detail = payment), arc-error (detail = Error).
+ */
+export class ArcCheckoutElement extends HTMLElement {
+  static observedAttributes = [...CHECKOUT_ATTRS];
+  private root: Root | null = null;
+
+  connectedCallback() {
+    const shadow = this.shadowRoot ?? this.attachShadow({ mode: "open" });
+    this.root ??= createRoot(shadow);
+    this.render();
+  }
+
+  disconnectedCallback() {
+    this.root?.unmount();
+    this.root = null;
+  }
+
+  attributeChangedCallback() {
+    this.render();
+  }
+
+  private emit(type: string, detail: unknown) {
+    this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true }));
+  }
+
+  private render() {
+    if (!this.root) return;
+    const publishableKey = this.getAttribute("publishable-key");
+    if (!publishableKey) {
+      this.root.render(createElement("p", null, "arc-checkout: set the publishable-key attribute."));
+      return;
+    }
+    const radius = this.getAttribute("radius");
+    const props: ArcCheckoutProps = {
+      publishableKey,
+      baseUrl: this.getAttribute("base-url") ?? undefined,
+      paymentId: this.getAttribute("payment-id") ?? undefined,
+      theme: (["light", "dark", "auto"] as const).find((t) => t === this.getAttribute("theme")),
+      accentColor: this.getAttribute("accent-color") ?? undefined,
+      radius: radius === null || Number.isNaN(Number(radius)) ? undefined : Number(radius),
+      title: this.getAttribute("title") ?? undefined,
+      showNetworkDetails: this.hasAttribute("show-network-details"),
+      onPaid: (p) => this.emit("arc-paid", p),
+      onStatus: (p) => this.emit("arc-status", p),
+      onError: (e) => this.emit("arc-error", e),
+    };
+    this.root.render(createElement(ArcCheckout, props));
+  }
+}
+
+/** Registers <arc-checkout> once. Safe to call repeatedly. */
+export function defineArcCheckout(tagName = "arc-checkout") {
+  if (typeof customElements !== "undefined" && !customElements.get(tagName)) {
+    customElements.define(tagName, class extends ArcCheckoutElement {});
   }
 }

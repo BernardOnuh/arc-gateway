@@ -7,7 +7,9 @@ import { generateApiKey } from "./auth/apiKey.js";
 const SHOP = "https://shop.example.com";
 const PAYOUT = "0x00000000000000000000000000000000000000aa";
 const PAYER = "0x00000000000000000000000000000000000000bb";
-const tx = (n: number) => `0x${n.toString(16).padStart(64, "0")}`;
+// Hashes must be unique across runs: the database keeps intents between test runs.
+const RUN = BigInt(Date.now()) * 1000n;
+const tx = (n: number) => `0x${(RUN + BigInt(n)).toString(16).padStart(64, "0")}`;
 
 describe("checkout payments", () => {
   let app: any;
@@ -122,7 +124,12 @@ describe("checkout payments", () => {
     // $5 of USDC on Base (6 decimals) and $5.10 of ETH on Ethereum (0.00204 ETH at the reference $2,500).
     const legA = await addLeg(payment.paymentId, { originChainId: 8453, tokenIn: "USDC", amountIn: "5100000", payer: PAYER });
     expect(legA.statusCode).toBe(201);
-    expect(legA.json()).toMatchObject({ status: "QUOTED", token: { symbol: "USDC", decimals: 6 }, payer: PAYER });
+    expect(legA.json()).toMatchObject({
+      status: "QUOTED",
+      token: { symbol: "USDC", decimals: 6 },
+      payer: PAYER,
+      execution: { fromChain: "Base", tokenIn: "USDC", tokenOut: "USDC", amountIn: "5.1", recipientAddress: PAYOUT },
+    });
     expect(legA.json().valueCents).toBeGreaterThanOrEqual(500);
     const legB = await addLeg(payment.paymentId, { originChainId: 1, tokenIn: "ETH", amountIn: "2040000000000000", payer: PAYER });
     expect(legB.statusCode).toBe(201);

@@ -16,7 +16,9 @@
     },
     "./standalone": "./dist/standalone/arc-widget.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -41,5 +43,10 @@
     "vite": "8.3.0",
     "vitest": "^5.0.3"
   },
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@circle-fin/adapter-viem-v2": "^1.19.0",
+    "@circle-fin/app-kit": "^1.16.0",
+    "viem": "^2.57.3"
+  }
 }
