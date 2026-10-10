@@ -41,6 +41,34 @@ export function useScrollProgress<T extends HTMLElement>(start = 1, end = 0.25) 
   return ref;
 }
 
+/**
+ * Moves an element down by `factor` × page scroll while the page is near the
+ * top, so it sinks slower than the content (clouds drifting downward).
+ */
+export function useParallax<T extends HTMLElement>(factor: number, max = 900) {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || reducedMotion() || factor === 0) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const y = Math.min(window.scrollY, max) * factor;
+      el.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0)`;
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [factor, max]);
+  return ref;
+}
+
 /** Fades and lifts its children in the first time they scroll into view. */
 export function Reveal({
   children,

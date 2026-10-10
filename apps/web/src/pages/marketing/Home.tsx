@@ -76,14 +76,14 @@ function StartForm() {
 }
 
 export function Home() {
-  // Hero preview starts slanted back and swings flat as you scroll down.
-  const heroPreview = useScrollProgress<HTMLDivElement>(0.95, 0.3);
-  // The second preview turns toward you as it scrolls into view.
-  const sidePreview = useScrollProgress<HTMLDivElement>(1, 0.35);
+  // Hero preview starts high and leaning back, then comes down into place and swings upright as you scroll.
+  const heroPreview = useScrollProgress<HTMLDivElement>(0.98, 0.32);
+  // The second preview floats down from above, like a cloud settling, as it scrolls into view.
+  const sidePreview = useScrollProgress<HTMLDivElement>(1.05, 0.45);
   return (
     <>
       <section className="relative overflow-hidden">
-        <SkyBackdrop />
+        <SkyBackdrop fade parallax />
         <div className="relative mx-auto max-w-6xl px-4 pt-36 text-center text-snow sm:pt-44">
           <h1 className="mx-auto max-w-5xl animate-rise text-[2.9rem] leading-[1.02] sm:text-[4.6rem]">
             Drop-in cross-chain gateway to ARC for your business
@@ -104,10 +104,10 @@ export function Home() {
           <div className="mt-14 animate-rise [animation-delay:380ms] sm:mt-16">
             <div
               ref={heroPreview}
-              className="glass mx-auto max-w-5xl origin-top rounded-t-[34px] p-2 pb-0 will-change-transform sm:p-3 sm:pb-0"
+              className="glass mx-auto max-w-5xl origin-bottom rounded-t-[34px] p-2 pb-0 will-change-transform sm:p-3 sm:pb-0"
               style={{
                 transform:
-                  "perspective(1600px) rotateX(calc((1 - var(--p, 0)) * 32deg)) scale(calc(0.88 + var(--p, 0) * 0.12)) translateY(calc((1 - var(--p, 0)) * 24px))",
+                  "perspective(1400px) translateY(calc((1 - var(--p, 0)) * -110px)) rotateX(calc((1 - var(--p, 0)) * 40deg)) scale(calc(0.86 + var(--p, 0) * 0.14))",
               }}
             >
               <ProductPreview className="rounded-b-none text-left" />
@@ -141,16 +141,19 @@ export function Home() {
             </Link>
           </Reveal>
           <div className="relative -mr-4 sm:-mr-40 lg:-mr-72">
-            <div
-              ref={sidePreview}
-              className="origin-left will-change-transform"
-              style={{
-                transform:
-                  "perspective(2200px) rotateY(calc(-34deg + var(--p, 0) * 20deg)) rotateX(calc(9deg - var(--p, 0) * 4deg)) rotateZ(1deg) translateX(calc((1 - var(--p, 0)) * 90px))",
-                opacity: "calc(0.35 + var(--p, 0) * 0.65)",
-              }}
-            >
-              <ProductPreview className="shadow-float" />
+            <div aria-hidden className="absolute -inset-10 rounded-full bg-brand-400/25 blur-3xl dark:bg-brand-500/20" />
+            <div className="animate-float [animation-duration:9s]">
+              <div
+                ref={sidePreview}
+                className="origin-left will-change-transform"
+                style={{
+                  transform:
+                    "perspective(2200px) translateY(calc((1 - var(--p, 0)) * -180px)) rotateY(-16deg) rotateX(calc(16deg - var(--p, 0) * 11deg)) rotateZ(1deg)",
+                  opacity: "calc(0.1 + var(--p, 0) * 0.9)",
+                }}
+              >
+                <ProductPreview className="shadow-float" />
+              </div>
             </div>
           </div>
         </div>

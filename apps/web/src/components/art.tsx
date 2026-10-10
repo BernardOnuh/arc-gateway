@@ -1,5 +1,6 @@
 import { useId, type ReactNode, type SVGProps } from "react";
 import { useTheme } from "../lib/theme";
+import { useParallax } from "./motion";
 
 /**
  * Hand-built SVG artwork, icons and the product preview. Everything is inline so it themes with
@@ -265,8 +266,21 @@ const NIGHT_SKY = "linear-gradient(180deg, #060918 0%, #0d1433 40%, #1a2558 78%,
  * clouds. Each cloud layer is two unscaled 1920px tiles side by side, so the
  * loop is seamless at any viewport size.
  */
-export function SkyBackdrop({ className = "" }: { className?: string }) {
+export function SkyBackdrop({
+  className = "",
+  fade = false,
+  parallax = false,
+}: {
+  className?: string;
+  /** Blend the bottom edge into the page background. */
+  fade?: boolean;
+  /** Clouds and stars sink as the page scrolls (heroes only). */
+  parallax?: boolean;
+}) {
   const { theme } = useTheme();
+  const backRef = useParallax<HTMLDivElement>(parallax ? 0.18 : 0);
+  const frontRef = useParallax<HTMLDivElement>(parallax ? 0.38 : 0);
+  const starRef = useParallax<HTMLDivElement>(parallax ? 0.08 : 0);
   const night = theme === "dark";
   const id = useId().replace(/:/g, "");
   const fill = night ? "#aeb9e6" : "#ffffff";
@@ -293,14 +307,22 @@ export function SkyBackdrop({ className = "" }: { className?: string }) {
       style={{ background: night ? NIGHT_SKY : DAY_SKY }}
     >
       {night && (
-        <>
+        <div ref={starRef} className="absolute inset-0">
           <Stars />
           <Moon />
-        </>
+        </div>
       )}
-      {layer(backClouds, night ? 22 : 18, "animate-drift-slow", "b", night ? 0.22 : 1)}
-      {layer(frontClouds, night ? 10 : 6, "animate-drift", "f", night ? 0.25 : 1)}
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-snow/20 dark:to-transparent" />
+      <div ref={backRef} className="absolute inset-0">
+        {layer(backClouds, night ? 22 : 18, "animate-drift-slow", "b", night ? 0.22 : 1)}
+      </div>
+      <div ref={frontRef} className="absolute inset-0">
+        {layer(frontClouds, night ? 10 : 6, "animate-drift", "f", night ? 0.25 : 1)}
+      </div>
+      <div
+        className={`absolute inset-x-0 bottom-0 ${
+          fade ? "h-64 bg-gradient-to-b from-transparent to-mist-100" : "h-40 bg-gradient-to-b from-transparent to-snow/20 dark:to-transparent"
+        }`}
+      />
     </div>
   );
 }
@@ -397,7 +419,10 @@ const previewRows = [
  */
 export function ProductPreview({ className = "" }: { className?: string }) {
   return (
-    <div aria-hidden className={`select-none rounded-[28px] bg-mist-200/90 p-3 text-ink-900 sm:p-5 ${className}`}>
+    <div
+      aria-hidden
+      className={`select-none rounded-[28px] bg-mist-200/90 p-3 text-ink-900 ring-1 ring-ink-900/5 dark:bg-[#141938] dark:ring-snow/10 sm:p-5 ${className}`}
+    >
       <div className="flex items-center gap-4 px-2 pb-4">
         <span className="flex w-40 shrink-0 items-center gap-2 text-sm font-bold">
           <LogoMark size={22} /> ARC Gateway
