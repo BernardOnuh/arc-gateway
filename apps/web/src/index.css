@@ -8,39 +8,41 @@
     text-rendering: optimizeLegibility;
   }
   body {
-    @apply bg-white font-sans text-slate-900;
+    @apply bg-mist-100 font-sans text-ink-900;
   }
   h1,
   h2,
   h3 {
-    @apply font-display tracking-tight;
+    @apply font-display font-bold tracking-[-0.03em];
   }
   ::selection {
-    @apply bg-brand-200 text-brand-900;
+    @apply bg-brand-200 text-ink-900;
   }
 }
 
 @layer components {
+  /* Navy pill: the main action on light backgrounds. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-gradient px-5 py-3 font-medium text-white shadow-glow transition hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent-300 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900 disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink-900 px-6 py-3 font-semibold text-white transition hover:bg-ink-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-200 disabled:opacity-60;
   }
-  .btn-ghost-dark {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-5 py-3 font-medium text-white backdrop-blur transition hover:bg-white/10;
+  /* Lavender pill: the main action on the sky. */
+  .btn-glass {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-100/90 px-6 py-3 font-semibold text-ink-900 shadow-soft ring-1 ring-white/70 backdrop-blur transition hover:bg-white;
+  }
+  .btn-outline-light {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/50 px-6 py-3 font-semibold text-white transition hover:bg-white/10;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-3 font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink-900/10 bg-white px-6 py-3 font-semibold text-ink-900 transition hover:border-ink-900/20;
+  }
+  .glass {
+    @apply bg-white/30 shadow-float ring-1 ring-white/50 backdrop-blur-xl;
   }
   .eyebrow {
-    @apply inline-flex items-center gap-2 rounded-full border border-brand-400/30 bg-brand-500/10 px-3 py-1 text-xs font-medium uppercase tracking-wider text-brand-200;
-  }
-  .text-gradient {
-    @apply bg-gradient-to-r from-brand-300 via-[#7aa2ff] to-accent-300 bg-clip-text text-transparent;
-  }
-  .text-gradient-dark {
-    @apply bg-gradient-to-r from-brand-600 to-accent-500 bg-clip-text text-transparent;
+    @apply inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white ring-1 ring-white/30 backdrop-blur;
   }
   .card {
-    @apply rounded-2xl border border-slate-200/80 bg-white shadow-card;
+    @apply rounded-3xl bg-white shadow-soft ring-1 ring-ink-900/5;
   }
 }
 

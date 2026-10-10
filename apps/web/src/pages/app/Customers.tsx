@@ -48,7 +48,7 @@ export function Customers() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <tr className="border-b border-mist-200 text-left text-ink-600">
                       <th className="py-2 pr-4 font-medium">External ID</th>
                       <th className="py-2 pr-4 font-medium">Receiving address</th>
                       <th className="py-2 pr-4 font-medium">Transactions</th>
@@ -57,7 +57,7 @@ export function Customers() {
                       <th className="py-2 font-medium">Added</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-mist-100">
                     {customers.data.items.map((c) => {
                       const r = revenue.get(c.customerId);
                       return (
@@ -79,7 +79,7 @@ export function Customers() {
                           <td className="py-2 pr-4">
                             <AccountCell customer={c} />
                           </td>
-                          <td className="whitespace-nowrap py-2 text-slate-500">{formatDate(c.createdAt)}</td>
+                          <td className="whitespace-nowrap py-2 text-ink-600">{formatDate(c.createdAt)}</td>
                         </tr>
                       );
                     })}
@@ -105,10 +105,10 @@ function CustomerSignInLink() {
   const url = `${window.location.origin}/account/login?partner=${profile.data.partnerId}`;
   return (
     <Card title="Customer sign-in page">
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-ink-600">
         Customers who've set up their account sign in here to manage their password and payout wallet.
       </p>
-      <code className="mt-3 block break-all rounded bg-slate-50 p-2 font-mono text-xs">{url}</code>
+      <code className="mt-3 block break-all rounded bg-mist-50 p-2 font-mono text-xs">{url}</code>
       <CopyButton text={url} label="Copy link" className="mt-2" />
     </Card>
   );
@@ -134,18 +134,18 @@ function AccountCell({ customer }: { customer: Customer }) {
           Active
         </span>
       ) : (
-        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">Not set up</span>
+        <span className="rounded-full bg-mist-100 px-2 py-0.5 text-ink-600">Not set up</span>
       )}
-      {customer.payoutWallet && <span className="ml-1 text-slate-500" title={customer.payoutWallet}>· wallet set</span>}
+      {customer.payoutWallet && <span className="ml-1 text-ink-600" title={customer.payoutWallet}>· wallet set</span>}
       <div className="mt-1">
         {link ? (
           <div className="space-y-1">
-            <code data-testid="setup-link" className="block max-w-[16rem] break-all rounded bg-slate-50 p-1 font-mono">
+            <code data-testid="setup-link" className="block max-w-[16rem] break-all rounded bg-mist-50 p-1 font-mono">
               {link.url}
             </code>
             <div className="flex items-center gap-2">
               <CopyButton text={link.url} label="Copy link" />
-              <span className="text-slate-500">expires {formatDate(link.expiresAt)}</span>
+              <span className="text-ink-600">expires {formatDate(link.expiresAt)}</span>
             </div>
           </div>
         ) : (
@@ -194,7 +194,7 @@ function AddCustomer({ onAdded }: { onAdded: () => void }) {
     <Card title="Add customer">
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label htmlFor="external-id" className="block text-sm font-medium text-slate-700">
+          <label htmlFor="external-id" className="block text-sm font-medium text-ink-700">
             External ID
           </label>
           <input
@@ -205,10 +205,10 @@ function AddCustomer({ onAdded }: { onAdded: () => void }) {
             placeholder="user_42"
             className={`mt-1 ${inputClass}`}
           />
-          <p className="mt-1 text-xs text-slate-500">Their ID in your system. Re-adding the same ID returns the existing customer.</p>
+          <p className="mt-1 text-xs text-ink-600">Their ID in your system. Re-adding the same ID returns the existing customer.</p>
         </div>
         <div>
-          <label htmlFor="recipient" className="block text-sm font-medium text-slate-700">
+          <label htmlFor="recipient" className="block text-sm font-medium text-ink-700">
             Receiving address
           </label>
           <input

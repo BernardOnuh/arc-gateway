@@ -1,7 +1,7 @@
 import { useId, type ReactNode, type SVGProps } from "react";
 
 /**
- * Hand-built SVG artwork and icons. Everything is inline so it themes with
+ * Hand-built SVG artwork, icons and the product preview. Everything is inline so it themes with
  * currentColor / brand gradients and costs no extra requests. Decorative
  * pieces are aria-hidden; the page text carries the meaning.
  */
@@ -121,14 +121,25 @@ export const IconWallet = (p: IconProps) => (
   </Icon>
 );
 
-/** Rounded gradient tile holding an icon (feature cards, steps). */
-export function IconTile({ children, tone = "brand" }: { children: ReactNode; tone?: "brand" | "dark" }) {
+export const IconBell = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z" />
+    <path d="M10 20.5a2 2 0 0 0 4 0" />
+  </Icon>
+);
+export const IconSearch = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m20 20-4.2-4.2" />
+  </Icon>
+);
+
+/** Soft periwinkle tile holding an icon (feature cards, steps). */
+export function IconTile({ children, tone = "light" }: { children: ReactNode; tone?: "light" | "dark" }) {
   return (
     <span
-      className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${
-        tone === "brand"
-          ? "bg-gradient-to-br from-brand-500/15 to-accent-400/15 text-brand-600 ring-1 ring-brand-500/20"
-          : "bg-white/5 text-accent-300 ring-1 ring-white/10"
+      className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${
+        tone === "light" ? "bg-brand-100 text-ink-900" : "bg-ink-900 text-white"
       }`}
     >
       {children}
@@ -137,28 +148,17 @@ export function IconTile({ children, tone = "brand" }: { children: ReactNode; to
 }
 
 /** The ARC Gateway mark: a hexagon (the network) around an "A". */
-export function LogoMark({ size = 30 }: { size?: number }) {
-  const id = useId();
+export function LogoMark({ size = 30, tone = "dark" }: { size?: number; tone?: "dark" | "light" }) {
+  const fg = tone === "dark" ? "#1c1f3f" : "#ffffff";
+  const bg = tone === "dark" ? "#ffffff" : "#1c1f3f";
   return (
     <svg aria-hidden width={size} height={size} viewBox="0 0 32 32">
-      <defs>
-        <linearGradient id={`${id}g`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#7552ff" />
-          <stop offset="1" stopColor="#22d3ee" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="8" fill="#0a1024" />
+      <rect width="32" height="32" rx="10" fill={fg} />
+      <path d="M16 6l8.7 5v10L16 26l-8.7-5V11z" fill="none" stroke="#b2bbef" strokeWidth="2.2" strokeLinejoin="round" />
       <path
-        d="M16 5l9.5 5.5v11L16 27l-9.5-5.5v-11z"
+        d="M11.5 20L16 10.5 20.5 20M13.1 16.8h5.8"
         fill="none"
-        stroke={`url(#${id}g)`}
-        strokeWidth="2.4"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M11 20.5L16 10l5 10.5M12.8 17h6.4"
-        fill="none"
-        stroke="#fff"
+        stroke={bg}
         strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -167,237 +167,241 @@ export function LogoMark({ size = 30 }: { size?: number }) {
   );
 }
 
-/** Soft glow blobs and a faint grid behind dark sections. */
-export function GlowBackdrop() {
+/** One fluffy cloud: overlapping soft ellipses, blurred. */
+function Cloud({ x, y, scale = 1, opacity = 0.9, blur }: { x: number; y: number; scale?: number; opacity?: number; blur: string }) {
   return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-grid-faint bg-grid [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_75%)]" />
-      <div className="absolute -left-32 -top-40 h-[28rem] w-[28rem] rounded-full bg-brand-600/30 blur-[110px]" />
-      <div className="absolute -right-24 top-24 h-[22rem] w-[22rem] rounded-full bg-accent-500/20 blur-[110px]" />
-    </div>
+    <g transform={`translate(${x} ${y}) scale(${scale})`} opacity={opacity} filter={`url(#${blur})`}>
+      <ellipse cx="0" cy="0" rx="120" ry="34" fill="#fff" />
+      <ellipse cx="-60" cy="-14" rx="62" ry="38" fill="#fff" />
+      <ellipse cx="20" cy="-34" rx="74" ry="48" fill="#fff" />
+      <ellipse cx="92" cy="-12" rx="56" ry="34" fill="#fff" />
+    </g>
   );
 }
 
-const sources = [
-  { x: 78, y: 92, label: "Ethereum", glyph: "eth" },
-  { x: 442, y: 86, label: "Base", glyph: "base" },
-  { x: 60, y: 330, label: "BNB Chain", glyph: "bnb" },
-  { x: 452, y: 336, label: "Robinhood", glyph: "hood" },
-] as const;
-
-function ChainGlyph({ kind }: { kind: (typeof sources)[number]["glyph"] }) {
-  switch (kind) {
-    case "eth":
-      return (
-        <g fill="none" stroke="#c7d2fe" strokeWidth="1.6" strokeLinejoin="round">
-          <path d="M0-13 9 1 0 6-9 1z" />
-          <path d="M-9 4 0 14 9 4 0 9z" />
-        </g>
-      );
-    case "base":
-      return (
-        <g>
-          <circle r="11" fill="#2f6bff" />
-          <path d="M-11 0h13" stroke="#0a1024" strokeWidth="3" />
-        </g>
-      );
-    case "bnb":
-      return (
-        <g fill="#f3ba2f">
-          <rect x="-4" y="-4" width="8" height="8" transform="rotate(45)" />
-          <rect x="-2.6" y="-13" width="5.2" height="5.2" transform="rotate(45 0 -10.4)" />
-          <rect x="-2.6" y="7.8" width="5.2" height="5.2" transform="rotate(45 0 10.4)" />
-          <rect x="-13" y="-2.6" width="5.2" height="5.2" transform="rotate(45 -10.4 0)" />
-          <rect x="7.8" y="-2.6" width="5.2" height="5.2" transform="rotate(45 10.4 0)" />
-        </g>
-      );
-    case "hood":
-      return (
-        <path
-          d="M-8 10C-6 0-1-8 9-11-1-4-3 4-3 10z"
-          fill="#c3f53c"
-        />
-      );
-  }
+function CloudBank({ blur, variant }: { blur: string; variant: 0 | 1 }) {
+  const a = [
+    { x: 320, y: 130, scale: 1.1, opacity: 0.8 },
+    { x: 520, y: 270, scale: 0.7, opacity: 0.55 },
+    { x: 860, y: 80, scale: 0.9, opacity: 0.6 },
+    { x: 1250, y: 230, scale: 1.2, opacity: 0.75 },
+    { x: 1540, y: 110, scale: 1.3, opacity: 0.8 },
+    { x: 420, y: 540, scale: 1.5, opacity: 0.7 },
+    { x: 1080, y: 560, scale: 1.7, opacity: 0.75 },
+    { x: 1560, y: 640, scale: 1.2, opacity: 0.65 },
+    { x: 700, y: 420, scale: 0.8, opacity: 0.5 },
+  ];
+  const b = [
+    { x: 380, y: 360, scale: 1.8, opacity: 0.45 },
+    { x: 760, y: 220, scale: 2.0, opacity: 0.3 },
+    { x: 1420, y: 400, scale: 1.9, opacity: 0.45 },
+    { x: 1000, y: 760, scale: 2.4, opacity: 0.7 },
+    { x: 520, y: 800, scale: 2.2, opacity: 0.75 },
+    { x: 1500, y: 830, scale: 2.2, opacity: 0.7 },
+  ];
+  return (
+    <>
+      {(variant === 0 ? a : b).map((c, i) => (
+        <Cloud key={i} {...c} blur={blur} />
+      ))}
+    </>
+  );
 }
 
 /**
- * Hero: source chains stream value along animated paths into the ARC
- * hexagon, which settles it to a customer wallet.
+ * Painted-sky backdrop: a blue gradient with two layers of vector clouds
+ * drifting at different speeds. Each layer is two unscaled 1920px tiles side
+ * by side (clouds kept clear of the tile edges), so the loop is seamless at
+ * any viewport size.
  */
-export function HeroNetwork({ className = "" }: { className?: string }) {
-  const id = useId();
-  const cx = 260;
-  const cy = 210;
-  return (
-    <svg aria-hidden viewBox="0 0 520 440" className={className}>
-      <defs>
-        <linearGradient id={`${id}flow`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#9175ff" />
-          <stop offset="1" stopColor="#22d3ee" />
-        </linearGradient>
-        <radialGradient id={`${id}core`} cx="50%" cy="45%" r="60%">
-          <stop offset="0" stopColor="#2a1d6c" />
-          <stop offset="1" stopColor="#0a1024" />
-        </radialGradient>
-        <filter id={`${id}glow`} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="8" result="b" />
-          <feMerge>
-            <feMergeNode in="b" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-
-      {/* orbit rings */}
-      <g fill="none" stroke="#7d8bb5" strokeOpacity="0.18">
-        <circle cx={cx} cy={cy} r="120" />
-        <circle cx={cx} cy={cy} r="175" strokeDasharray="2 8" />
-      </g>
-
-      {/* flows: chain -> ARC */}
-      {sources.map((s) => {
-        const mx = (s.x + cx) / 2 + (s.y < cy ? 0 : 0);
-        const my = s.y < cy ? cy - 40 : cy + 40;
-        const d = `M${s.x} ${s.y} Q${mx} ${my} ${cx} ${cy}`;
-        return (
-          <g key={s.label}>
-            <path d={d} fill="none" stroke="#7d8bb5" strokeOpacity="0.2" strokeWidth="2" />
-            <path
-              d={d}
-              fill="none"
-              stroke={`url(#${id}flow)`}
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              strokeDasharray="6 14"
-              className="animate-dash"
-            />
-          </g>
-        );
-      })}
-
-      {/* settlement: ARC -> wallet */}
-      <path
-        d={`M${cx} ${cy + 96} L${cx} 384`}
-        fill="none"
-        stroke="#22d3ee"
-        strokeWidth="2.4"
-        strokeDasharray="6 14"
-        strokeLinecap="round"
-        className="animate-dash"
-      />
-
-      {/* source chain nodes */}
-      {sources.map((s, i) => (
-        <g key={s.label} transform={`translate(${s.x} ${s.y})`}>
-          <g className="animate-float" style={{ animationDelay: `${i * -1.3}s` }}>
-            <circle r="30" fill="#111a36" stroke="#2a3766" strokeWidth="1.5" />
-            <ChainGlyph kind={s.glyph} />
-            <text y="50" textAnchor="middle" fill="#a9b4d6" fontSize="12" fontFamily="Inter Variable, sans-serif">
-              {s.label}
-            </text>
-          </g>
-        </g>
+export function SkyBackdrop({ className = "" }: { className?: string }) {
+  const id = useId().replace(/:/g, "");
+  const layer = (variant: 0 | 1, blur: string, anim: string) => (
+    <div className={`absolute left-0 top-0 flex h-[900px] w-[3840px] ${anim}`}>
+      {[0, 1].map((k) => (
+        <svg key={k} width="1920" height="900" viewBox="0 0 1920 900" className="shrink-0">
+          <defs>
+            <filter id={`${blur}${k}`} x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation={variant === 0 ? 7 : 18} />
+            </filter>
+          </defs>
+          <CloudBank blur={`${blur}${k}`} variant={variant} />
+        </svg>
       ))}
-
-      {/* ARC core */}
-      <g transform={`translate(${cx} ${cy})`}>
-        <circle r="54" fill="none" stroke="#7552ff" strokeOpacity="0.5" className="origin-center animate-pulse-ring" style={{ transformBox: "fill-box" }} />
-        <path
-          d="M0-62 54-31v62L0 62-54 31v-62z"
-          fill={`url(#${id}core)`}
-          stroke={`url(#${id}flow)`}
-          strokeWidth="2.5"
-          strokeLinejoin="round"
-          filter={`url(#${id}glow)`}
-        />
-        <path
-          d="M-17 18 0-20 17 18M-11 6h22"
-          fill="none"
-          stroke="#fff"
-          strokeWidth="4.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <text y="88" textAnchor="middle" fill="#e8e2ff" fontSize="13" fontWeight="600" fontFamily="Space Grotesk Variable, sans-serif">
-          ARC network
-        </text>
-      </g>
-
-      {/* customer wallet */}
-      <g transform={`translate(${cx} 404)`}>
-        <rect x="-72" y="-20" width="144" height="40" rx="12" fill="#111a36" stroke="#22d3ee" strokeOpacity="0.6" />
-        <circle cx="-50" r="7" fill="#22d3ee" />
-        <text x="-36" y="4.5" fill="#e0f7ff" fontSize="12.5" fontFamily="Inter Variable, sans-serif">
-          Settled · USDC
-        </text>
-      </g>
-    </svg>
+    </div>
   );
-}
-
-/** Auth side panel: a key turning into a session, guarded by a shield. */
-export function AuthArt({ className = "" }: { className?: string }) {
-  const id = useId();
   return (
-    <svg aria-hidden viewBox="0 0 360 300" className={className}>
-      <defs>
-        <linearGradient id={`${id}g`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#9175ff" />
-          <stop offset="1" stopColor="#22d3ee" />
-        </linearGradient>
-      </defs>
-      <g fill="none" stroke="#7d8bb5" strokeOpacity="0.2">
-        <circle cx="180" cy="150" r="70" />
-        <circle cx="180" cy="150" r="115" strokeDasharray="2 8" />
-      </g>
-      {/* back card */}
-      <g transform="translate(70 70) rotate(-8)">
-        <rect width="170" height="104" rx="16" fill="#111a36" stroke="#2a3766" />
-        <rect x="18" y="22" width="70" height="8" rx="4" fill="#2a3766" />
-        <rect x="18" y="42" width="120" height="8" rx="4" fill="#1b264a" />
-        <rect x="18" y="62" width="96" height="8" rx="4" fill="#1b264a" />
-      </g>
-      {/* front card with key */}
-      <g transform="translate(118 112) rotate(6)">
-        <rect width="178" height="110" rx="16" fill="#0a1024" stroke={`url(#${id}g)`} strokeWidth="1.8" />
-        <g transform="translate(26 55)" stroke="#fff" strokeWidth="3.4" fill="none" strokeLinecap="round">
-          <circle r="13" />
-          <path d="M13 0h58M56 0v12M44 0v8" />
-        </g>
-        <rect x="26" y="86" width="64" height="7" rx="3.5" fill="#2a3766" />
-        <text x="26" y="30" fill="#a9b4d6" fontSize="11" fontFamily="JetBrains Mono Variable, monospace">
-          gw_live_••••
-        </text>
-      </g>
-      {/* shield badge */}
-      <g transform="translate(268 74)">
-        <g className="animate-float">
-        <circle r="26" fill="#111a36" stroke={`url(#${id}g)`} strokeWidth="1.8" />
-        <path d="M0-13-10-9v7c0 6.5 4.3 11 10 12.5C5.7 9 10 4.5 10-2v-7z" fill="none" stroke="#67e8f9" strokeWidth="2" strokeLinejoin="round" />
-        <path d="m-4.5 0 3 3 6-6.5" fill="none" stroke="#67e8f9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </g>
-      </g>
-    </svg>
+    <div aria-hidden className={`pointer-events-none absolute inset-0 overflow-hidden bg-sky ${className}`}>
+      {layer(1, `${id}b`, "animate-drift-slow")}
+      {layer(0, `${id}a`, "animate-drift")}
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white/25" />
+    </div>
   );
 }
 
 /** Small illustration for empty tables and lists. */
 export function EmptyArt({ className = "" }: { className?: string }) {
-  const id = useId();
   return (
     <svg aria-hidden viewBox="0 0 120 80" className={className}>
+      <ellipse cx="60" cy="40" rx="50" ry="22" fill="none" stroke="#d0d6f6" strokeDasharray="3 5" />
+      <path d="M60 16 80 27.5v23L60 62 40 50.5v-23z" fill="#e6e9fb" stroke="#6b78d6" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M40 27.5 60 39l20-11.5M60 39v23" fill="none" stroke="#6b78d6" strokeWidth="1.6" strokeLinejoin="round" />
+      <circle cx="13" cy="34" r="3" fill="#b2bbef" />
+      <circle cx="106" cy="48" r="3" fill="#1c1f3f" />
+    </svg>
+  );
+}
+
+/** Line chart for the preview: weekly settled volume with a tooltip on the peak. */
+function VolumeChart() {
+  const pts = [
+    [0, 92], [40, 70], [80, 96], [120, 30], [150, 88], [190, 104], [230, 74], [270, 100], [300, 84],
+  ];
+  const d = pts.reduce((acc, [x, y], i) => {
+    if (i === 0) return `M${x} ${y}`;
+    const [px, py] = pts[i - 1];
+    const cx = (px + x) / 2;
+    return `${acc} C${cx} ${py} ${cx} ${y} ${x} ${y}`;
+  }, "");
+  return (
+    <svg viewBox="-24 -10 340 150" className="w-full">
       <defs>
-        <linearGradient id={`${id}g`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#9175ff" />
-          <stop offset="1" stopColor="#22d3ee" />
+        <linearGradient id="pv-bar" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#8d99e4" stopOpacity="0.55" />
+          <stop offset="1" stopColor="#8d99e4" stopOpacity="0" />
         </linearGradient>
       </defs>
-      <ellipse cx="60" cy="40" rx="50" ry="22" fill="none" stroke="#cbd5e1" strokeDasharray="3 5" />
-      <path d="M60 16 80 27.5v23L60 62 40 50.5v-23z" fill="#f3f0ff" stroke={`url(#${id}g)`} strokeWidth="2" strokeLinejoin="round" />
-      <path d="M40 27.5 60 39l20-11.5M60 39v23" fill="none" stroke={`url(#${id}g)`} strokeWidth="1.6" strokeLinejoin="round" />
-      <circle cx="13" cy="34" r="3" fill="#22d3ee" />
-      <circle cx="106" cy="48" r="3" fill="#9175ff" />
+      {[24, 64, 104].map((y, i) => (
+        <g key={y}>
+          <line x1="0" x2="300" y1={y} y2={y} stroke="#e3e6f6" />
+          <text x="-8" y={y + 3} textAnchor="end" fontSize="8" fill="#8a8fb3">
+            {["90k", "60k", "30k"][i]}
+          </text>
+        </g>
+      ))}
+      <rect x="112" y="30" width="16" height="96" rx="4" fill="url(#pv-bar)" />
+      <path d={d} fill="none" stroke="#1c1f3f" strokeWidth="2.2" strokeLinecap="round" />
+      <circle cx="120" cy="30" r="4" fill="#fff" stroke="#1c1f3f" strokeWidth="2" />
+      <g transform="translate(120 10)">
+        <rect x="-26" y="-12" width="52" height="16" rx="5" fill="#1c1f3f" />
+        <text y="-1" textAnchor="middle" fontSize="8" fill="#fff" fontWeight="600">
+          $84,210
+        </text>
+      </g>
+      {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d, i) => (
+        <text key={d} x={i * 50} y="138" textAnchor="middle" fontSize="8" fill={i === 2 ? "#1c1f3f" : "#8a8fb3"} fontWeight={i === 2 ? 700 : 400}>
+          {d}
+        </text>
+      ))}
     </svg>
+  );
+}
+
+const previewNav = [
+  { icon: <IconHome size={16} />, label: "Overview", active: true },
+  { icon: <IconUsers size={16} />, label: "Customers" },
+  { icon: <IconSwap size={16} />, label: "Transactions" },
+  { icon: <IconChart size={16} />, label: "Ledger" },
+  { icon: <IconWidget size={16} />, label: "Widget" },
+  { icon: <IconSettings size={16} />, label: "Settings" },
+];
+
+const previewRows = [
+  { pair: "WETH → USDC", route: "Ethereum → ARC", amount: "$12,480.00", status: "Settled" },
+  { pair: "USDC → USDC", route: "Base L2 → ARC", amount: "$2,150.00", status: "Settled" },
+  { pair: "WBNB → EURC", route: "BNB → ARC", amount: "$940.75", status: "Filling" },
+  { pair: "WETH → USDC", route: "Base L2 → ARC", amount: "$5,300.00", status: "Settled" },
+];
+
+/**
+ * Decorative mock of the partner dashboard for marketing pages. Sample
+ * numbers only; hidden from assistive tech (the page copy carries the meaning).
+ */
+export function ProductPreview({ className = "" }: { className?: string }) {
+  return (
+    <div aria-hidden className={`select-none rounded-[28px] bg-mist-200/90 p-3 text-ink-900 sm:p-5 ${className}`}>
+      <div className="flex items-center gap-4 px-2 pb-4">
+        <span className="flex w-40 shrink-0 items-center gap-2 text-sm font-bold">
+          <LogoMark size={22} /> ARC Gateway
+        </span>
+        <span className="hidden flex-1 items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-xs text-ink-400 sm:flex md:max-w-xs">
+          <IconSearch size={14} /> Search intents
+        </span>
+        <span className="ml-auto flex items-center gap-3 text-xs font-semibold">
+          USDC
+          <IconBell size={16} />
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-ink-900 text-[11px] text-white">AP</span>
+        </span>
+      </div>
+      <div className="flex gap-4">
+        <ul className="hidden w-40 shrink-0 space-y-1 pt-4 text-xs font-semibold md:block">
+          {previewNav.map((n) => (
+            <li
+              key={n.label}
+              className={`flex items-center gap-2.5 rounded-xl px-3 py-2 ${n.active ? "bg-white text-ink-900 shadow-soft" : "text-ink-700"}`}
+            >
+              {n.icon}
+              {n.label}
+            </li>
+          ))}
+        </ul>
+        <div className="grid min-w-0 flex-1 gap-4 rounded-[22px] bg-white p-4 sm:p-5 lg:grid-cols-[1.6fr_1fr]">
+          <div className="min-w-0">
+            <div className="grid gap-3 sm:grid-cols-[1.3fr_1fr_1fr]">
+              <div className="rounded-2xl bg-card-sheen p-4">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-ink-700">
+                  Fees earned <span className="rounded-full bg-white/70 px-2 py-0.5">0.10%</span>
+                </div>
+                <p className="mt-5 text-xl font-bold tracking-tight">1,284.20 USDC</p>
+                <p className="mt-1 text-[10px] text-ink-600">Acme Pay · this month</p>
+              </div>
+              <div className="rounded-2xl bg-brand-100 p-4">
+                <span className="grid h-7 w-7 place-items-center rounded-lg bg-ink-900 text-white">
+                  <IconUsers size={14} />
+                </span>
+                <p className="mt-3 text-[11px] font-semibold">Customers</p>
+                <p className="text-lg font-bold">1,204</p>
+              </div>
+              <div className="hidden rounded-2xl bg-brand-100 p-4 sm:block">
+                <span className="grid h-7 w-7 place-items-center rounded-lg bg-ink-900 text-white">
+                  <IconBolt size={14} />
+                </span>
+                <p className="mt-3 text-[11px] font-semibold">Intents today</p>
+                <p className="text-lg font-bold">86</p>
+              </div>
+            </div>
+            <p className="mt-5 text-sm font-bold">Recent intents</p>
+            <ul className="mt-2 divide-y divide-mist-200 text-[11px]">
+              {previewRows.map((r, i) => (
+                <li key={i} className="grid grid-cols-[1.2fr_1fr_auto] items-center gap-3 py-2.5 sm:grid-cols-[1.2fr_1.2fr_1fr_auto]">
+                  <span className="font-bold">{r.pair}</span>
+                  <span className="hidden text-ink-400 sm:block">{r.route}</span>
+                  <span className="font-semibold">{r.amount}</span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      r.status === "Settled" ? "bg-emerald-50 text-emerald-700" : "bg-brand-100 text-brand-700"
+                    }`}
+                  >
+                    {r.status}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="hidden rounded-2xl bg-mist-50 p-4 lg:block">
+            <p className="text-[11px] text-ink-600">Settled this week</p>
+            <p className="text-2xl font-bold tracking-tight">$482,190</p>
+            <div className="mt-3">
+              <VolumeChart />
+            </div>
+            <p className="mt-3 text-sm font-bold">Destination</p>
+            <div className="mt-2 flex items-center justify-between rounded-xl bg-card-sheen px-3 py-2.5 text-[11px]">
+              <span className="font-bold">ARC mainnet</span>
+              <span className="text-ink-600">USDC · EURC</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

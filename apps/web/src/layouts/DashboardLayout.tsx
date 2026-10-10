@@ -16,14 +16,15 @@ import { useAuth } from "../lib/auth";
 import { usePartnerProfile } from "../lib/queries";
 
 const nav: { to: string; label: string; icon: ReactNode; end?: boolean }[] = [
-  { to: "/app", label: "Overview", icon: <IconHome size={18} />, end: true },
-  { to: "/app/customers", label: "Customers", icon: <IconUsers size={18} /> },
-  { to: "/app/transactions", label: "Transactions", icon: <IconSwap size={18} /> },
-  { to: "/app/ledger", label: "Ledger", icon: <IconChart size={18} /> },
-  { to: "/app/widget", label: "Widget", icon: <IconWidget size={18} /> },
-  { to: "/app/settings", label: "Settings", icon: <IconSettings size={18} /> },
+  { to: "/app", label: "Overview", icon: <IconHome size={19} />, end: true },
+  { to: "/app/customers", label: "Customers", icon: <IconUsers size={19} /> },
+  { to: "/app/transactions", label: "Transactions", icon: <IconSwap size={19} /> },
+  { to: "/app/ledger", label: "Ledger", icon: <IconChart size={19} /> },
+  { to: "/app/widget", label: "Widget", icon: <IconWidget size={19} /> },
+  { to: "/app/settings", label: "Settings", icon: <IconSettings size={19} /> },
 ];
 
+/** Lavender shell with the page content in one big white panel. */
 export function DashboardLayout() {
   const { logout } = useAuth();
   const profile = usePartnerProfile();
@@ -36,23 +37,20 @@ export function DashboardLayout() {
   const name = profile.data?.name;
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 md:flex-row">
-      <aside className="relative bg-ink-950 text-ink-300 md:sticky md:top-0 md:flex md:h-screen md:w-60 md:shrink-0 md:flex-col">
-        <div aria-hidden className="pointer-events-none absolute -left-20 top-0 h-60 w-60 rounded-full bg-brand-600/25 blur-[90px]" />
-        <div className="relative px-5 py-5">
-          <Logo to="/app" tone="light" />
+    <div className="min-h-screen bg-mist-200 md:flex">
+      <aside className="md:sticky md:top-0 md:flex md:h-screen md:w-64 md:shrink-0 md:flex-col">
+        <div className="px-6 py-6">
+          <Logo to="/app" />
         </div>
-        <nav className="relative flex gap-1 overflow-x-auto px-3 pb-3 text-sm md:flex-1 md:flex-col md:pb-4">
+        <nav className="flex gap-1 overflow-x-auto px-4 pb-3 text-[15px] font-semibold md:flex-1 md:flex-col md:pt-6">
           {nav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 transition ${
-                  isActive
-                    ? "bg-white/10 font-medium text-white shadow-[inset_2px_0_0_#22d3ee]"
-                    : "hover:bg-white/5 hover:text-white"
+                `flex items-center gap-3.5 whitespace-nowrap rounded-2xl px-4 py-3 transition ${
+                  isActive ? "bg-white text-ink-900 shadow-soft" : "text-ink-700 hover:bg-white/60"
                 }`
               }
             >
@@ -63,28 +61,30 @@ export function DashboardLayout() {
         </nav>
         <Link
           to="/developers"
-          className="relative mx-3 mb-4 hidden items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-xs transition hover:bg-white/10 md:flex"
+          className="mx-4 mb-5 hidden items-center gap-3 rounded-2xl bg-card-sheen p-4 text-xs text-ink-700 transition hover:brightness-105 md:flex"
         >
-          <IconBook size={18} className="text-accent-300" />
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-ink-900 text-white">
+            <IconBook size={17} />
+          </span>
           <span>
-            <span className="block font-medium text-white">Developer docs</span>
+            <span className="block text-sm font-bold text-ink-900">Developer docs</span>
             SDK, REST and errors
           </span>
         </Link>
       </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur md:px-8">
-          <span className="flex min-w-0 items-center gap-3 truncate text-sm text-slate-600">
+      <div className="flex min-w-0 flex-1 flex-col md:py-4 md:pr-4">
+        <header className="flex items-center justify-between gap-4 px-4 py-3 md:px-2 md:pb-4 md:pt-2">
+          <span className="flex min-w-0 items-center gap-3 truncate text-sm text-ink-600">
             {name ? (
               <>
                 <span
                   aria-hidden
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-gradient font-display text-sm font-semibold text-white"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink-900 text-sm font-bold text-white"
                 >
                   {name.slice(0, 1).toUpperCase()}
                 </span>
                 <span className="truncate">
-                  Signed in as <span className="font-medium text-slate-900">{name}</span>
+                  Signed in as <span className="font-bold text-ink-900">{name}</span>
                 </span>
               </>
             ) : (
@@ -94,13 +94,13 @@ export function DashboardLayout() {
           <button
             type="button"
             onClick={logout}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50"
+            className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 text-sm font-semibold text-ink-900 transition hover:bg-white"
           >
             <IconLogout size={16} />
             Log out
           </button>
         </header>
-        <main className="flex-1 px-4 py-8 md:px-8">
+        <main className="flex-1 bg-white px-4 py-8 md:rounded-[32px] md:px-10 md:py-10">
           <div className="mx-auto max-w-6xl">
             <Outlet />
           </div>

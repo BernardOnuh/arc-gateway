@@ -31,7 +31,7 @@ export function Transactions() {
       role="tab"
       aria-selected={view === id}
       onClick={() => update({ view: id === "quotes" ? undefined : id, status: undefined })}
-      className={`rounded-md px-3 py-1.5 text-sm ${view === id ? "bg-white font-medium shadow-sm" : "text-slate-600"}`}
+      className={`rounded-md px-3 py-1.5 text-sm ${view === id ? "bg-white font-medium shadow-sm" : "text-ink-600"}`}
     >
       {label}
     </button>
@@ -41,17 +41,17 @@ export function Transactions() {
     <>
       <PageTitle title="Transactions" intro="Every quote made with your key, and the intents submitted from them." />
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div role="tablist" className="flex gap-1 rounded-lg bg-slate-100 p-1">
+        <div role="tablist" className="flex gap-1 rounded-lg bg-mist-100 p-1">
           {tab("quotes", "Quotes")}
           {tab("intents", "Intents")}
         </div>
         {view === "intents" && (
-          <label className="flex items-center gap-2 text-sm text-slate-600">
+          <label className="flex items-center gap-2 text-sm text-ink-600">
             Status
             <select
               value={status ?? ""}
               onChange={(e) => update({ status: e.target.value || undefined })}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm shadow-sm"
+              className="rounded-lg border border-mist-200 bg-white px-2.5 py-2 text-sm shadow-sm"
             >
               <option value="">All</option>
               {STATUSES.map((s) => (
@@ -98,7 +98,7 @@ function QuotesTable({ customerId }: { customerId?: string }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
+                <tr className="border-b border-mist-200 text-left text-ink-600">
                   <th className="py-2 pr-4 font-medium">Created</th>
                   <th className="py-2 pr-4 font-medium">Route</th>
                   <th className="py-2 pr-4 font-medium">Amount in</th>
@@ -107,10 +107,10 @@ function QuotesTable({ customerId }: { customerId?: string }) {
                   <th className="py-2 font-medium">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-mist-100">
                 {quotes.data.items.map((q) => (
                   <tr key={q.quoteId}>
-                    <td className="whitespace-nowrap py-2 pr-4 text-slate-500" title={`Quote ${q.quoteId}`}>
+                    <td className="whitespace-nowrap py-2 pr-4 text-ink-600" title={`Quote ${q.quoteId}`}>
                       {formatDate(q.createdAt)}
                     </td>
                     <td className="whitespace-nowrap py-2 pr-4">
@@ -163,7 +163,7 @@ function IntentsTable({ customerId, status }: { customerId?: string; status?: In
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
+                <tr className="border-b border-mist-200 text-left text-ink-600">
                   <th className="py-2 pr-4 font-medium">Submitted</th>
                   <th className="py-2 pr-4 font-medium">Status</th>
                   <th className="py-2 pr-4 font-medium">Route</th>
@@ -172,10 +172,10 @@ function IntentsTable({ customerId, status }: { customerId?: string; status?: In
                   <th className="py-2 font-medium">Updated</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-mist-100">
                 {intents.data.items.map((i) => (
                   <tr key={i.id}>
-                    <td className="whitespace-nowrap py-2 pr-4 text-slate-500" title={`Intent ${i.id}`}>
+                    <td className="whitespace-nowrap py-2 pr-4 text-ink-600" title={`Intent ${i.id}`}>
                       {formatDate(i.createdAt)}
                     </td>
                     <td className="py-2 pr-4">
@@ -192,7 +192,7 @@ function IntentsTable({ customerId, status }: { customerId?: string; status?: In
                     <td className="py-2 pr-4">
                       <TxLink catalog={catalog} chainId={i.destChainId} hash={i.destTx} />
                     </td>
-                    <td className="whitespace-nowrap py-2 text-slate-500">{formatDate(i.updatedAt)}</td>
+                    <td className="whitespace-nowrap py-2 text-ink-600">{formatDate(i.updatedAt)}</td>
                   </tr>
                 ))}
               </tbody>

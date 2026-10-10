@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { GlowBackdrop, HeroNetwork } from "../../components/art";
+import { SkyBackdrop } from "../../components/art";
 import { Amount, ChainName } from "../../components/dashboard/Amount";
 import {
   buttonClass,
@@ -44,16 +44,14 @@ export function Overview() {
         }
       />
 
-      <div className="relative mb-6 overflow-hidden rounded-2xl bg-ink-950 px-6 py-8 text-white sm:px-8">
-        <GlowBackdrop />
-        <div className="relative flex items-center justify-between gap-6">
-          <div>
-            <p className="text-sm text-ink-300">Welcome back{profile.data ? `, ${profile.data.name}` : ""}</p>
-            <p className="mt-1 max-w-md font-display text-xl font-semibold">
-              Every quote, intent and fee your customers generate, routed to ARC.
-            </p>
-          </div>
-          <HeroNetwork className="-my-6 hidden h-40 w-auto shrink-0 md:block" />
+      <div className="relative mb-6 overflow-hidden rounded-3xl px-6 py-9 text-white sm:px-9">
+        <SkyBackdrop />
+        <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-[#3d5fae]/80 via-[#3d5fae]/30 to-transparent" />
+        <div className="relative">
+          <p className="text-sm font-medium text-white/85">Welcome back{profile.data ? `, ${profile.data.name}` : ""}</p>
+          <p className="mt-1 max-w-lg text-2xl font-bold tracking-[-0.03em]">
+            Every quote, intent and fee your customers generate, routed to ARC.
+          </p>
         </div>
       </div>
 
@@ -92,17 +90,17 @@ export function Overview() {
               </Link>
             </Empty>
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-mist-100">
               {recent.data.items.map((q) => (
                 <li key={q.quoteId} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                   <span>
                     <Amount catalog={catalog} chainId={q.originChainId} token={q.tokenIn} value={q.amountIn} />{" "}
-                    <span className="text-slate-500">
+                    <span className="text-ink-600">
                       from <ChainName catalog={catalog} chainId={q.originChainId} />
                     </span>
                   </span>
                   <span className="flex items-center gap-3">
-                    <span className="text-xs text-slate-500">{formatDate(q.createdAt)}</span>
+                    <span className="text-xs text-ink-600">{formatDate(q.createdAt)}</span>
                     <StatusBadge status={q.intent?.status ?? null} />
                   </span>
                 </li>

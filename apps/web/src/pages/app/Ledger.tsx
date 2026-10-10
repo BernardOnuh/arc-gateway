@@ -38,7 +38,7 @@ export function Ledger() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <tr className="border-b border-mist-200 text-left text-ink-600">
                       <th className="py-2 pr-4 font-medium">Token</th>
                       <th className="py-2 pr-4 font-medium">Chain</th>
                       <th className="py-2 pr-4 font-medium">Transactions</th>
@@ -46,7 +46,7 @@ export function Ledger() {
                       <th className="py-2 font-medium">Fees earned</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-mist-100">
                     {ledger.data.byToken.map((t) => (
                       <tr key={`${t.chainId}:${t.address}`}>
                         <td className="py-2 pr-4 font-medium">{t.symbol}</td>
@@ -69,18 +69,18 @@ export function Ledger() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <tr className="border-b border-mist-200 text-left text-ink-600">
                       <th className="py-2 pr-4 font-medium">Customer</th>
                       <th className="py-2 pr-4 font-medium">Transactions</th>
                       <th className="py-2 pr-4 font-medium">Volume</th>
                       <th className="py-2 font-medium">Fees earned</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-mist-100">
                     {ledger.data.byCustomer.map((c) => (
                       <tr key={c.customerId ?? "unattributed"}>
                         <td className="py-2 pr-4">
-                          {c.externalId ?? <span className="text-slate-500">Unattributed</span>}
+                          {c.externalId ?? <span className="text-ink-600">Unattributed</span>}
                         </td>
                         <td className="py-2 pr-4">{c.transactions}</td>
                         <td className="py-2 pr-4">{tokenTotalsText(c.byToken, "amountInTotal")}</td>

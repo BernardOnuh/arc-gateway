@@ -7,11 +7,11 @@ export function SupportedNetworks() {
   const tokens = useQuery({ queryKey: ["public", "tokens"], queryFn: () => publicClient.tokens() });
 
   if (chains.isPending || tokens.isPending) {
-    return <p className="text-sm text-slate-500">Loading supported networks…</p>;
+    return <p className="text-sm text-ink-600">Loading supported networks…</p>;
   }
   if (chains.error || tokens.error) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-ink-600">
         Couldn't load the live network list ({describeError(chains.error ?? tokens.error)}).
       </p>
     );
@@ -26,14 +26,14 @@ export function SupportedNetworks() {
         return (
           <li
             key={chain.id}
-            className={`card p-5 ${chain.isArc ? "ring-1 ring-brand-500/30" : ""}`}
+            className={`card p-5 ${chain.isArc ? "bg-card-sheen" : ""}`}
           >
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-3 font-medium">
                 <span
                   aria-hidden
-                  className={`grid h-9 w-9 place-items-center rounded-full font-display text-sm font-semibold ${
-                    chain.isArc ? "bg-brand-gradient text-white" : "bg-slate-100 text-slate-600"
+                  className={`grid h-9 w-9 place-items-center rounded-full text-sm font-bold ${
+                    chain.isArc ? "bg-ink-900 text-white" : "bg-brand-100 text-ink-900"
                   }`}
                 >
                   {chain.name.slice(0, 1)}
@@ -42,22 +42,22 @@ export function SupportedNetworks() {
               </span>
               <span
                 className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  chain.isArc ? "bg-brand-50 text-brand-700" : "bg-slate-100 text-slate-600"
+                  chain.isArc ? "bg-white/80 text-ink-900" : "bg-mist-100 text-ink-600"
                 }`}
               >
                 {chain.isArc ? (chain.testnet ? "Destination · testnet" : "Destination") : "Source"}
               </span>
             </div>
-            <p className="mt-3 font-mono text-xs text-slate-400">Chain ID {chain.id}</p>
+            <p className="mt-3 font-mono text-xs text-ink-400">Chain ID {chain.id}</p>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {symbols.length ? (
                 symbols.map((sym) => (
-                  <span key={sym} className="rounded-md bg-slate-50 px-2 py-0.5 font-mono text-xs text-slate-700 ring-1 ring-slate-200">
+                  <span key={sym} className="rounded-full bg-mist-100 px-2.5 py-0.5 font-mono text-xs text-ink-700">
                     {sym}
                   </span>
                 ))
               ) : (
-                <span className="text-sm text-slate-500">No tokens listed</span>
+                <span className="text-sm text-ink-600">No tokens listed</span>
               )}
             </div>
           </li>

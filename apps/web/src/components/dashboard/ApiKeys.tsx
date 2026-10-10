@@ -25,16 +25,16 @@ export function SecretKeyCard() {
         <>
           {current && (
             <dl className="grid grid-cols-[10rem_1fr] gap-y-2 text-sm">
-              <dt className="text-slate-500">Key</dt>
+              <dt className="text-ink-600">Key</dt>
               <dd className="font-mono">{masked(current)}</dd>
-              <dt className="text-slate-500">Created</dt>
+              <dt className="text-ink-600">Created</dt>
               <dd>{formatDate(current.createdAt)}</dd>
             </dl>
           )}
           {history.length > 0 && (
             <details className="mt-4 text-sm">
-              <summary className="cursor-pointer text-slate-600">Previous keys ({history.length})</summary>
-              <ul className="mt-2 space-y-1 text-slate-500">
+              <summary className="cursor-pointer text-ink-600">Previous keys ({history.length})</summary>
+              <ul className="mt-2 space-y-1 text-ink-600">
                 {history.map((k) => (
                   <li key={k.id}>
                     <span className="font-mono">{masked(k)}</span> · created {formatDate(k.createdAt)}
@@ -46,7 +46,7 @@ export function SecretKeyCard() {
           )}
         </>
       )}
-      <p className="mt-4 text-sm text-slate-500">
+      <p className="mt-4 text-sm text-ink-600">
         Use it only on your server. We store a hash, so it can't be shown again. If it leaks, rotate it.
       </p>
       {/* Outside the loading branch so the one-time reveal survives the key switch. */}
@@ -84,7 +84,7 @@ function RotateKey() {
       <div role="note" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
         <p className="font-medium">Your new secret key. Store it now; it is shown only once.</p>
         <p className="mt-1">The old key stopped working. Update your servers with this one.</p>
-        <code data-testid="new-api-key" className="mt-3 block break-all rounded bg-white p-3 font-mono text-slate-900">
+        <code data-testid="new-api-key" className="mt-3 block break-all rounded bg-white p-3 font-mono text-ink-900">
           {newKey}
         </code>
         <div className="mt-3 flex gap-2">
@@ -142,7 +142,7 @@ export function PublishableKeysCard() {
 
   return (
     <Card title="Publishable keys">
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-ink-600">
         For the swap widget in your customers' browsers. A publishable key can only request quotes and read intent
         status, and only from the websites you list. It can't submit intents or read your data.
       </p>
@@ -154,7 +154,7 @@ export function PublishableKeysCard() {
         ) : active.length === 0 ? (
           <Empty>No publishable keys yet.</Empty>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-mist-100">
             {active.map((k) => (
               <PublishableKeyRow key={k.id} apiKey={k} />
             ))}
@@ -164,8 +164,8 @@ export function PublishableKeysCard() {
       <CreatePublishableKey />
       {revoked.length > 0 && (
         <details className="mt-4 text-sm">
-          <summary className="cursor-pointer text-slate-600">Revoked ({revoked.length})</summary>
-          <ul className="mt-2 space-y-1 text-slate-500">
+          <summary className="cursor-pointer text-ink-600">Revoked ({revoked.length})</summary>
+          <ul className="mt-2 space-y-1 text-ink-600">
             {revoked.map((k) => (
               <li key={k.id}>
                 <span className="font-mono">{masked(k)}</span>
@@ -199,7 +199,7 @@ function PublishableKeyRow({ apiKey }: { apiKey: ApiKeySummary }) {
               >
                 {revoke.isPending ? "Revoking…" : "Confirm revoke"}
               </button>
-              <button type="button" className="text-xs text-slate-600" onClick={() => setConfirming(false)}>
+              <button type="button" className="text-xs text-ink-600" onClick={() => setConfirming(false)}>
                 Cancel
               </button>
             </>
@@ -214,7 +214,7 @@ function PublishableKeyRow({ apiKey }: { apiKey: ApiKeySummary }) {
           )}
         </div>
       </div>
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-ink-600">
         Allowed sites: {(apiKey.allowedOrigins ?? []).join(", ") || "none"} · created {formatDate(apiKey.createdAt)}
       </p>
       {revoke.error && (
@@ -248,8 +248,8 @@ function CreatePublishableKey() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-4 border-t border-slate-200 pt-4">
-      <label htmlFor="allowed-origins" className="block text-sm font-medium text-slate-700">
+    <form onSubmit={onSubmit} className="mt-4 border-t border-mist-200 pt-4">
+      <label htmlFor="allowed-origins" className="block text-sm font-medium text-ink-700">
         Allowed websites
       </label>
       <textarea
@@ -260,7 +260,7 @@ function CreatePublishableKey() {
         placeholder={"https://shop.example.com\nhttp://localhost:5173"}
         className={`mt-1 font-mono ${inputClass}`}
       />
-      <p className="mt-1 text-xs text-slate-500">
+      <p className="mt-1 text-xs text-ink-600">
         One per line: scheme and host, no path. To preview the widget here, include {window.location.origin}.
       </p>
       {error && (

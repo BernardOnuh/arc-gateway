@@ -24,7 +24,7 @@ export function CustomerLogin() {
     return (
       <div className="card p-7">
         <h1 className="text-2xl font-semibold">Sign in</h1>
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 text-sm text-ink-600">
           Open the sign-in link from the business you use. If you haven't set a password yet, ask them for a setup link.
         </p>
       </div>
@@ -52,13 +52,13 @@ export function CustomerLogin() {
     <form onSubmit={onSubmit} className="space-y-4 card p-7">
       <h1 className="text-2xl font-semibold">Sign in to your account</h1>
       <div>
-        <label htmlFor="login-email" className="block text-sm font-medium text-slate-700">
+        <label htmlFor="login-email" className="block text-sm font-medium text-ink-700">
           Email
         </label>
         <input id="login-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`mt-1 ${inputClass}`} />
       </div>
       <div>
-        <label htmlFor="login-password" className="block text-sm font-medium text-slate-700">
+        <label htmlFor="login-password" className="block text-sm font-medium text-ink-700">
           Password
         </label>
         <input id="login-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={`mt-1 ${inputClass}`} />

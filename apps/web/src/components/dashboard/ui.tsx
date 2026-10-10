@@ -8,8 +8,8 @@ export function PageTitle({ title, intro, actions }: { title: string; intro?: Re
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-[1.75rem] font-semibold">{title}</h1>
-        {intro && <p className="mt-1 text-sm text-slate-500">{intro}</p>}
+        <h1 className="text-[1.9rem]">{title}</h1>
+        {intro && <p className="mt-1 text-sm text-ink-600">{intro}</p>}
       </div>
       {actions}
     </div>
@@ -20,23 +20,22 @@ export function Card({ title, children, actions }: { title?: string; children: R
   return (
     <section className="card">
       {(title || actions) && (
-        <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-5 py-3.5">
-          {title && <h2 className="font-display text-[15px] font-semibold">{title}</h2>}
+        <div className="flex items-center justify-between gap-2 border-b border-mist-100 px-6 py-4">
+          {title && <h2 className="text-base">{title}</h2>}
           {actions}
         </div>
       )}
-      <div className="p-5">{children}</div>
+      <div className="p-6">{children}</div>
     </section>
   );
 }
 
 export function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
   return (
-    <div className="card relative overflow-hidden p-5">
-      <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-brand-gradient" />
-      <p className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="mt-2 font-display text-2xl font-semibold">{value}</p>
-      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+    <div className="rounded-3xl bg-brand-100 p-5 first:bg-card-sheen">
+      <p className="text-sm font-semibold text-ink-700">{label}</p>
+      <p className="mt-3 text-2xl font-extrabold tracking-[-0.03em]">{value}</p>
+      {hint && <p className="mt-1 text-xs text-ink-600">{hint}</p>}
     </div>
   );
 }
@@ -56,7 +55,7 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 
 export function Empty({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-3 py-8 text-center text-sm text-slate-500">
+    <div className="flex flex-col items-center gap-3 py-8 text-center text-sm text-ink-600">
       <EmptyArt className="h-16 w-24" />
       <p className="max-w-sm">{children}</p>
     </div>
@@ -65,15 +64,15 @@ export function Empty({ children }: { children: ReactNode }) {
 
 export function Loading() {
   return (
-    <p className="flex items-center justify-center gap-2 py-8 text-sm text-slate-500">
-      <span aria-hidden className="h-4 w-4 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
+    <p className="flex items-center justify-center gap-2 py-8 text-sm text-ink-600">
+      <span aria-hidden className="h-4 w-4 animate-spin rounded-full border-2 border-brand-200 border-t-ink-900" />
       Loading…
     </p>
   );
 }
 
 const statusStyles: Record<IntentStatus, string> = {
-  PENDING: "bg-slate-100 text-slate-700 ring-slate-200",
+  PENDING: "bg-mist-100 text-ink-700 ring-mist-200",
   ORIGIN_CONFIRMED: "bg-blue-50 text-blue-700 ring-blue-200",
   FILLED: "bg-brand-50 text-brand-700 ring-brand-200",
   EXECUTED_ON_ARC: "bg-emerald-50 text-emerald-700 ring-emerald-200",
@@ -82,7 +81,7 @@ const statusStyles: Record<IntentStatus, string> = {
 };
 
 export function StatusBadge({ status }: { status: IntentStatus | null }) {
-  if (!status) return <span className="rounded-full bg-slate-50 px-2 py-0.5 text-xs text-slate-500">Quoted</span>;
+  if (!status) return <span className="rounded-full bg-mist-50 px-2 py-0.5 text-xs text-ink-600">Quoted</span>;
   return (
     <span className={`whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[11px] font-medium ring-1 ring-inset ${statusStyles[status]}`}>
       {status}
@@ -105,7 +104,7 @@ export function Pagination({
   const from = offset + 1;
   const to = Math.min(offset + limit, total);
   return (
-    <nav aria-label="Pagination" className="mt-4 flex items-center justify-between text-sm text-slate-600">
+    <nav aria-label="Pagination" className="mt-4 flex items-center justify-between text-sm text-ink-600">
       <span>
         {from}–{to} of {total}
       </span>
@@ -114,7 +113,7 @@ export function Pagination({
           type="button"
           disabled={offset === 0}
           onClick={() => onChange(Math.max(0, offset - limit))}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1 hover:bg-slate-50 disabled:opacity-40"
+          className="rounded-full border border-ink-900/10 bg-white px-4 py-1.5 font-semibold hover:bg-mist-50 disabled:opacity-40"
         >
           Previous
         </button>
@@ -122,7 +121,7 @@ export function Pagination({
           type="button"
           disabled={to >= total}
           onClick={() => onChange(offset + limit)}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1 hover:bg-slate-50 disabled:opacity-40"
+          className="rounded-full border border-ink-900/10 bg-white px-4 py-1.5 font-semibold hover:bg-mist-50 disabled:opacity-40"
         >
           Next
         </button>
@@ -140,8 +139,8 @@ export function tokenTotalsText(rows: LedgerTokenTotals[], field: "feeTotal" | "
 }
 
 export const inputClass =
-  "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm transition placeholder:text-slate-400 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-100";
+  "w-full rounded-2xl border border-ink-900/10 bg-white px-4 py-3 text-sm transition placeholder:text-ink-400 focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-100";
 export const buttonClass =
-  "inline-flex items-center justify-center gap-2 rounded-lg bg-brand-gradient px-4 py-2.5 text-sm font-medium text-white shadow-glow transition hover:brightness-110 disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 rounded-full bg-ink-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-ink-800 disabled:opacity-60";
 export const secondaryButtonClass =
-  "inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 rounded-full border border-ink-900/10 bg-white px-5 py-2.5 text-sm font-semibold text-ink-900 transition hover:border-ink-900/20 hover:bg-mist-50 disabled:opacity-60";

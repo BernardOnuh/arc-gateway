@@ -38,7 +38,7 @@ export function Account() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold">Your account</h1>
-          <p className="text-sm text-slate-500">with {a.partnerName}</p>
+          <p className="text-sm text-ink-600">with {a.partnerName}</p>
         </div>
         <button type="button" className={secondaryButtonClass} onClick={signOut}>
           Sign out
@@ -47,9 +47,9 @@ export function Account() {
 
       <Card title="Details">
         <dl className="grid grid-cols-[9rem_1fr] gap-y-2 text-sm">
-          <dt className="text-slate-500">Email</dt>
+          <dt className="text-ink-600">Email</dt>
           <dd>{a.email}</dd>
-          <dt className="text-slate-500">Receiving address</dt>
+          <dt className="text-ink-600">Receiving address</dt>
           <dd className="break-all font-mono text-xs">{a.recipientAddress}</dd>
         </dl>
       </Card>
@@ -91,13 +91,13 @@ function PayoutWallet({ account }: { account: CustomerAccount }) {
 
   return (
     <Card title="Payout wallet">
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-ink-600">
         Where your share of fees will be sent. Payouts aren't live yet; saving a wallet now means you're ready when they
         are.
       </p>
       <form onSubmit={onSubmit} className="mt-4 space-y-3">
         <div>
-          <label htmlFor="payout-chain" className="block text-sm font-medium text-slate-700">
+          <label htmlFor="payout-chain" className="block text-sm font-medium text-ink-700">
             Network
           </label>
           <select
@@ -115,7 +115,7 @@ function PayoutWallet({ account }: { account: CustomerAccount }) {
           </select>
         </div>
         <div>
-          <label htmlFor="payout-address" className="block text-sm font-medium text-slate-700">
+          <label htmlFor="payout-address" className="block text-sm font-medium text-ink-700">
             Wallet address
           </label>
           <input
@@ -176,13 +176,13 @@ function ChangePassword() {
     <Card title="Change password">
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
-          <label htmlFor="current-password" className="block text-sm font-medium text-slate-700">
+          <label htmlFor="current-password" className="block text-sm font-medium text-ink-700">
             Current password
           </label>
           <input id="current-password" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} className={`mt-1 ${inputClass}`} />
         </div>
         <div>
-          <label htmlFor="new-password" className="block text-sm font-medium text-slate-700">
+          <label htmlFor="new-password" className="block text-sm font-medium text-ink-700">
             New password
           </label>
           <input id="new-password" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} className={`mt-1 ${inputClass}`} />

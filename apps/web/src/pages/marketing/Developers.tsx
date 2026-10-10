@@ -72,7 +72,7 @@ export function Developers() {
 
       <Section title="TypeScript SDK" intro="@arc/gateway-sdk wraps every endpoint with typed requests and responses.">
         <CodeBlock title="server.ts" code={sdkSnippet} />
-        <p className="mt-4 text-sm text-slate-500">
+        <p className="mt-4 text-sm text-ink-600">
           Keep your <code className="font-mono">gw_live_</code> key on your server. Never ship it to a browser or mobile
           app.
         </p>
@@ -80,13 +80,13 @@ export function Developers() {
 
       <Section title="REST API" intro="Prefer raw HTTP? Authenticate with a bearer token.">
         <CodeBlock title="Request a quote" code={curlSnippet} />
-        <p className="mt-4 text-sm text-slate-600">
+        <p className="mt-4 text-sm text-ink-600">
           Full reference with request and response schemas:{" "}
-          <a href={`${GATEWAY_URL}/docs`} className="font-medium text-brand-600 hover:underline">
+          <a href={`${GATEWAY_URL}/docs`} className="font-medium text-ink-900 underline underline-offset-4">
             interactive API docs
           </a>{" "}
           ·{" "}
-          <a href={`${GATEWAY_URL}/openapi.json`} className="font-medium text-brand-600 hover:underline">
+          <a href={`${GATEWAY_URL}/openapi.json`} className="font-medium text-ink-900 underline underline-offset-4">
             OpenAPI spec
           </a>
         </p>
@@ -96,18 +96,18 @@ export function Developers() {
         <div className="card overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
+            <tr className="border-b border-mist-200 bg-mist-50 text-left text-ink-600">
               <th className="px-5 py-3 font-medium">Status</th>
               <th className="px-5 py-3 font-medium">Meaning</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-mist-100">
             {errors.map(([code, meaning]) => (
               <tr key={code}>
                 <td className="px-5 py-3">
-                  <span className="rounded-md bg-brand-50 px-2 py-0.5 font-mono text-brand-700">{code}</span>
+                  <span className="rounded-full bg-brand-100 px-2.5 py-0.5 font-mono text-ink-900">{code}</span>
                 </td>
-                <td className="px-5 py-3 text-slate-600">{meaning}</td>
+                <td className="px-5 py-3 text-ink-600">{meaning}</td>
               </tr>
             ))}
           </tbody>
@@ -116,7 +116,7 @@ export function Developers() {
       </Section>
 
       <CtaPanel title="Get started">
-        <Link to="/signup" className="btn-primary">
+        <Link to="/signup" className="btn-glass">
           Get your API key <IconArrowRight size={18} />
         </Link>
       </CtaPanel>

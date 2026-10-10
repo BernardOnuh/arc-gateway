@@ -10,7 +10,7 @@ const flow = [
 ];
 
 const lifecycleTone: Record<string, string> = {
-  PENDING: "bg-slate-300",
+  PENDING: "bg-mist-300",
   ORIGIN_CONFIRMED: "bg-blue-400",
   FILLED: "bg-brand-400",
   EXECUTED_ON_ARC: "bg-emerald-400",
@@ -39,34 +39,34 @@ export function HowItWorks() {
           {/* connector line behind the cards on desktop */}
           <span
             aria-hidden
-            className="absolute left-[12%] right-[12%] top-[46px] hidden h-px bg-gradient-to-r from-brand-400 via-[#7aa2ff] to-accent-400 md:block"
+            className="absolute left-[12%] right-[12%] top-[46px] hidden border-t-2 border-dashed border-brand-300 md:block"
           />
           {flow.map((step, i) => (
             <li key={step.name} className="card relative p-5">
               <div className="flex items-center gap-3">
                 <IconTile>{step.icon}</IconTile>
-                <span className="font-mono text-xs text-slate-400">step {i + 1}</span>
+                <span className="font-mono text-xs text-ink-400">step {i + 1}</span>
               </div>
-              <p className="mt-4 font-display text-lg font-semibold">{step.name}</p>
-              <p className="mt-1 text-sm text-slate-600">{step.detail}</p>
+              <p className="mt-4 text-lg font-bold tracking-[-0.02em]">{step.name}</p>
+              <p className="mt-1 text-sm text-ink-600">{step.detail}</p>
             </li>
           ))}
         </ol>
       </Section>
 
-      <div className="bg-slate-50">
+      <div className="bg-white">
       <Section title="Who's who">
         <dl className="grid gap-6 md:grid-cols-2">
-          <div className="card p-6">
-            <dt className="font-display text-lg font-semibold">Partner (you)</dt>
-            <dd className="mt-1 text-sm text-slate-600">
+          <div className="rounded-3xl bg-card-sheen p-7">
+            <dt className="text-lg font-bold">Partner (you)</dt>
+            <dd className="mt-1 text-sm text-ink-600">
               A business integrating the gateway. You hold the secret API key, register customers, and earn
               revenue on every transaction your customers make.
             </dd>
           </div>
-          <div className="card p-6">
-            <dt className="font-display text-lg font-semibold">Customer</dt>
-            <dd className="mt-1 text-sm text-slate-600">
+          <div className="rounded-3xl bg-mist-100 p-7">
+            <dt className="text-lg font-bold">Customer</dt>
+            <dd className="mt-1 text-sm text-ink-600">
               Your end user. They never see an API key. Each customer has an address that receives funds on ARC,
               and their transactions show up in your ledger.
             </dd>
@@ -76,24 +76,24 @@ export function HowItWorks() {
       </div>
 
       <Section title="Transaction lifecycle" intro="Every submitted intent moves through these statuses. Poll it, or watch it in your dashboard.">
-        <ol className="card divide-y divide-slate-100 overflow-hidden">
+        <ol className="card divide-y divide-mist-100 overflow-hidden">
           {lifecycle.map((s) => (
             <li key={s.status} className="flex flex-col gap-1 p-4 sm:flex-row sm:items-center sm:gap-6 sm:px-6">
               <code className="flex w-56 shrink-0 items-center gap-2.5 font-mono text-sm text-brand-700">
                 <span aria-hidden className={`h-2 w-2 rounded-full ${lifecycleTone[s.status]}`} />
                 {s.status}
               </code>
-              <span className="text-sm text-slate-600">{s.detail}</span>
+              <span className="text-sm text-ink-600">{s.detail}</span>
             </li>
           ))}
         </ol>
       </Section>
 
       <CtaPanel title="Ready to integrate?">
-        <Link to="/signup" className="btn-primary">
+        <Link to="/signup" className="btn-glass">
           Get your API key <IconArrowRight size={18} />
         </Link>
-        <Link to="/developers" className="btn-ghost-dark">
+        <Link to="/developers" className="btn-outline-light">
           Developer docs
         </Link>
       </CtaPanel>

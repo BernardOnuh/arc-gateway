@@ -25,7 +25,7 @@ export function App() {
       <Route
         path="app/*"
         element={
-          <Suspense fallback={<div className="p-8 text-sm text-slate-500">Loading…</div>}>
+          <Suspense fallback={<div className="p-8 text-sm text-ink-600">Loading…</div>}>
             <DashboardRoutes />
           </Suspense>
         }
@@ -33,7 +33,7 @@ export function App() {
       <Route
         path="account/*"
         element={
-          <Suspense fallback={<div className="p-8 text-sm text-slate-500">Loading…</div>}>
+          <Suspense fallback={<div className="p-8 text-sm text-ink-600">Loading…</div>}>
             <AccountRoutes />
           </Suspense>
         }

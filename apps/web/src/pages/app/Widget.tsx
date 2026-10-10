@@ -92,12 +92,12 @@ export function Widget() {
         <div className="grid gap-6 xl:grid-cols-[1fr_26rem]">
           <div className="min-w-0 space-y-6">
             {publishable.length > 1 && (
-              <label className="flex items-center gap-2 text-sm text-slate-600">
+              <label className="flex items-center gap-2 text-sm text-ink-600">
                 Publishable key
                 <select
                   value={key.id}
                   onChange={(e) => setSelected(e.target.value)}
-                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 font-mono text-xs shadow-sm"
+                  className="rounded-lg border border-mist-200 bg-white px-2.5 py-2 font-mono text-xs shadow-sm"
                 >
                   {publishable.map((k) => (
                     <option key={k.id} value={k.id}>
@@ -116,13 +116,13 @@ export function Widget() {
             {previewAllowed ? (
               <>
                 <ArcSwapWidget publishableKey={key.publishableKey!} baseUrl={GATEWAY_URL} />
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-2 text-xs text-ink-600">
                   Real quotes from the gateway. Submission is off in this preview.
                 </p>
               </>
             ) : (
               <Card>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-ink-600">
                   This key isn't allowed on <span className="font-mono">{origin}</span>, so the preview can't run here.
                   Create a key that includes this origin in{" "}
                   <Link to="/app/settings" className="font-medium text-brand-600 hover:underline">

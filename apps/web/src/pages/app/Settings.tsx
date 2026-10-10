@@ -17,24 +17,24 @@ export function Settings() {
         <div className="grid max-w-3xl gap-6">
           <Card title="Business">
             <dl className="grid grid-cols-[10rem_1fr] gap-y-2 text-sm">
-              <dt className="text-slate-500">Name</dt>
+              <dt className="text-ink-600">Name</dt>
               <dd>{profile.data.name}</dd>
-              <dt className="text-slate-500">Contact email</dt>
-              <dd>{profile.data.email ?? <span className="text-slate-400">Not set</span>}</dd>
-              <dt className="text-slate-500">Partner ID</dt>
+              <dt className="text-ink-600">Contact email</dt>
+              <dd>{profile.data.email ?? <span className="text-ink-400">Not set</span>}</dd>
+              <dt className="text-ink-600">Partner ID</dt>
               <dd className="break-all font-mono text-xs">{profile.data.partnerId}</dd>
-              <dt className="text-slate-500">Member since</dt>
+              <dt className="text-ink-600">Member since</dt>
               <dd>{formatDate(profile.data.createdAt)}</dd>
             </dl>
           </Card>
 
           <Card title="Plan">
             <dl className="grid grid-cols-[10rem_1fr] gap-y-2 text-sm">
-              <dt className="text-slate-500">Transaction fee</dt>
+              <dt className="text-ink-600">Transaction fee</dt>
               <dd>
                 {formatBps(profile.data.feeBps)} ({profile.data.feeBps} bps)
               </dd>
-              <dt className="text-slate-500">Rate limit</dt>
+              <dt className="text-ink-600">Rate limit</dt>
               <dd>{profile.data.rateLimitPerMin} requests/min per key</dd>
             </dl>
           </Card>
@@ -43,7 +43,7 @@ export function Settings() {
           <PublishableKeysCard />
 
           <Card title="Customer payouts">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-ink-600">
               Fees are tracked per customer in your ledger. Payouts to customer wallets aren't live yet; customers will
               be able to set a payout wallet ahead of time.
             </p>

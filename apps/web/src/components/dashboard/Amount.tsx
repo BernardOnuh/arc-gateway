@@ -23,7 +23,7 @@ export function Amount({
 }
 
 export function TxLink({ catalog, chainId, hash }: { catalog: Catalog; chainId: number; hash: string | null }) {
-  if (!hash) return <span className="text-slate-400">—</span>;
+  if (!hash) return <span className="text-ink-400">—</span>;
   const chain = catalog.chain(chainId);
   const label = `${hash.slice(0, 8)}…${hash.slice(-6)}`;
   if (!chain || !/^0x[0-9a-fA-F]{64}$/.test(hash)) return <span className="font-mono text-xs">{label}</span>;

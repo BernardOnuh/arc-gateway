@@ -5,11 +5,11 @@ export function Logo({ to = "/", tone = "dark" }: { to?: string; tone?: "dark" |
   return (
     <Link
       to={to}
-      className={`flex items-center gap-2.5 font-display text-[17px] font-semibold tracking-tight ${
-        tone === "light" ? "text-white" : "text-slate-900"
+      className={`flex items-center gap-2.5 text-lg font-extrabold uppercase tracking-[-0.02em] ${
+        tone === "light" ? "text-white" : "text-ink-900"
       }`}
     >
-      <LogoMark />
+      <LogoMark tone={tone} />
       ARC Gateway
     </Link>
   );

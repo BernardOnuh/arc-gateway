@@ -7,7 +7,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation();
   if (status === "checking") {
     return (
-      <div role="status" className="flex min-h-screen items-center justify-center text-sm text-slate-500">
+      <div role="status" className="flex min-h-screen items-center justify-center text-sm text-ink-600">
         Loading…
       </div>
     );
