@@ -13,6 +13,7 @@ import { quoteProvider } from "../providers/index.js";
 import type { UpstreamQuote } from "../providers/types.js";
 import { errorResponseSchema, toJsonSchema } from "../schemas.js";
 import { getTokens, resolveToken } from "../tokens.js";
+import { transactionSender } from "../onchain.js";
 
 function toHuman(amount: string, decimals: number): string {
   const raw = BigInt(amount);
@@ -544,6 +545,16 @@ export async function paymentRoutes(app: FastifyInstance) {
       }
       const reused = await db.select({ id: intents.id }).from(intents).where(eq(intents.upstreamId, txHash)).limit(1);
       if (reused.length > 0) return reply.code(409).send({ error: "transaction already used for another payment" });
+
+      // On a live provider, a transaction we can see must come from the paying wallet;
+      // otherwise anyone could claim someone else's swap as their payment.
+      if (quoteProvider.name !== "mock") {
+        const originChainId = (row.quote.request as { originChainId: number }).originChainId;
+        const sender = await transactionSender(originChainId, txHash);
+        if (sender && sender !== row.leg.payer.toLowerCase()) {
+          return reply.code(400).send({ error: "that transaction wasn't sent by the paying wallet" });
+        }
+      }
 
       const result = await db.transaction(async (tx) => {
         const [intent] = await tx

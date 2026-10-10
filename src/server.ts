@@ -1,6 +1,7 @@
 import Fastify, { type FastifyError, type RouteOptions } from "fastify";
 import { Redis } from "ioredis";
 import cookie from "@fastify/cookie";
+import helmet from "@fastify/helmet";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import swagger from "@fastify/swagger";
@@ -46,7 +47,9 @@ export function isWidgetRoute(method: string, url: string): boolean {
 
 export async function buildApp() {
   const app = Fastify({
-    logger: config.isTest ? false : { level: config.logLevel },
+    logger: config.isTest ? false : { level: config.logLevel, redact: ["req.headers.authorization", "req.headers.cookie"] },
+    // Trust exactly N proxy hops so req.ip is the real client behind a load balancer.
+    trustProxy: config.trustProxy > 0 ? (_address: string, hop: number) => hop < config.trustProxy : false,
     ajv: { customOptions: { strict: false } },
   });
 
@@ -115,6 +118,8 @@ export async function buildApp() {
   await app.register(swaggerUi, { routePrefix: "/docs" });
 
   await app.register(cookie);
+  // Security headers. The API serves JSON (plus Swagger UI at /docs, which needs its inline assets), so no CSP.
+  await app.register(helmet, { contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } });
 
   const wildcard = config.corsOrigins.includes("*");
   const dashboardOrigins = wildcard ? true : config.corsOrigins;
@@ -159,6 +164,16 @@ export async function buildApp() {
 
 async function bootstrap() {
   const app = await buildApp();
+  // Graceful shutdown: stop accepting requests, finish in-flight ones, close DB/Redis.
+  for (const signal of ["SIGTERM", "SIGINT"] as const) {
+    process.once(signal, () => {
+      app.log.info(`${signal} received, shutting down`);
+      app
+        .close()
+        .then(() => process.exit(0))
+        .catch(() => process.exit(1));
+    });
+  }
   await app.listen({ port: config.port, host: "0.0.0.0" });
   app.log.info(`arc-gateway listening on http://localhost:${config.port}`);
   app.log.info(`Swagger UI: http://localhost:${config.port}/docs`);

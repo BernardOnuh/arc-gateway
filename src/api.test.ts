@@ -1065,3 +1065,30 @@ describe("dashboard list endpoints and CORS", () => {
     expect(evil.headers["access-control-allow-origin"]).toBeUndefined();
   });
 });
+
+describe("legacy gateway-funded submit", () => {
+  it("is refused when the flag is off (the default with the live provider)", async () => {
+    const { config } = await import("./config.js");
+    const { buildApp } = await import("./server.js");
+    const app = await buildApp();
+    const prev = config.gatewayFundedSubmit;
+    (config as { gatewayFundedSubmit: boolean }).gatewayFundedSubmit = false;
+    try {
+      const k = (await import("./auth/apiKey.js")).generateApiKey();
+      const { db } = await import("./db/index.js");
+      const { apiKeys } = await import("./db/schema.js");
+      await db.insert(apiKeys).values({ partnerName: "legacy-gate", keyPrefix: k.keyPrefix, keyHash: k.keyHash, feeBps: 10, rateLimitPerMin: 100, active: true });
+      const res = await app.inject({
+        method: "POST",
+        url: "/v1/intents/submit",
+        headers: { authorization: `Bearer ${k.rawKey}` },
+        body: { quoteId: "00000000-0000-0000-0000-000000000000", signedPayload: "0x" },
+      });
+      expect(res.statusCode).toBe(403);
+      expect(res.json().error).toMatch(/payments/);
+    } finally {
+      (config as { gatewayFundedSubmit: boolean }).gatewayFundedSubmit = prev;
+      await app.close();
+    }
+  });
+});

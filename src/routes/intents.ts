@@ -7,6 +7,7 @@ import { quotes, intents } from "../db/schema.js";
 import type { UpstreamQuote } from "../providers/types.js";
 import { quoteProvider } from "../providers/index.js";
 import { refreshIntent } from "../intentStatus.js";
+import { config } from "../config.js";
 import {
   submitBodySchema,
   submitResponseSchema,
@@ -38,12 +39,19 @@ export async function intentRoutes(app: FastifyInstance) {
           200: toJsonSchema(submitResponseSchema),
           400: toJsonSchema(errorResponseSchema),
           401: toJsonSchema(errorResponseSchema),
+          403: toJsonSchema(errorResponseSchema),
           500: toJsonSchema(errorResponseSchema),
           502: toJsonSchema(errorResponseSchema),
         },
       },
     },
     async (request, reply) => {
+      if (!config.gatewayFundedSubmit) {
+        return reply.code(403).send({
+          error:
+            "gateway-funded submit is disabled: use payments (POST /v1/payments), where the customer's wallet pays",
+        });
+      }
       const parsed = submitBodySchema.safeParse(request.body);
       if (!parsed.success) {
         return reply.code(400).send({ error: "invalid input" });
