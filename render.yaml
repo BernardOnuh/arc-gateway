@@ -1,0 +1,100 @@
+# Render Blueprint: Dashboard → New → Blueprint → pick this repo.
+# Creates the API (Docker), the web app (static site), Postgres and Key Value (Redis).
+#
+# Plans: "free" works for a demo, but free web services sleep after 15 min idle
+# (webhooks and payment updates pause until the next request), free Postgres
+# expires after 30 days, and free Key Value isn't persisted. For real payments
+# switch api to "starter" or higher, the database to "basic-256mb" or higher,
+# and Key Value to "starter".
+#
+# After the first deploy, set APP_URL and CORS_ORIGINS on the API to the web
+# app's https URL (or your custom domain), then redeploy.
+services:
+  - type: web
+    name: arc-gateway-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Free plans have no pre-deploy step: apply migrations on boot.
+      - key: RUN_MIGRATIONS_ON_START
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: arc-gateway-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: arc-gateway-redis
+          property: connectionString
+      - key: TRUST_PROXY
+        value: "1"
+      - key: QUOTE_PROVIDER
+        value: arc
+      - key: ARC_CHAIN_ID
+        value: "5042"
+      - key: ARC_RPC_URL
+        value: https://rpc.mainnet.arc.io
+      # app. and api. on onrender.com are different sites, so the cookie needs SameSite=None.
+      # With a custom domain (app.example.com + api.example.com), use lax.
+      - key: SESSION_COOKIE_SAMESITE
+        value: none
+      - key: APP_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: CIRCLE_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+
+  - type: web
+    name: arc-gateway-web
+    runtime: static
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @arc/gateway-sdk build &&
+      pnpm --filter @arc/widget build &&
+      VITE_GATEWAY_URL=https://$API_HOST pnpm --filter @arc/web build &&
+      cp -r packages/arc-widget/dist/standalone apps/web/dist/widget
+    staticPublishPath: ./apps/web/dist
+    envVars:
+      - key: API_HOST
+        fromService:
+          type: web
+          name: arc-gateway-api
+          property: host
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /widget/*
+        name: Access-Control-Allow-Origin
+        value: "*"
+
+  - type: keyvalue
+    name: arc-gateway-redis
+    plan: free
+    maxmemoryPolicy: noeviction
+    ipAllowList: [] # only reachable from your Render services
+
+databases:
+  - name: arc-gateway-db
+    plan: free
+    databaseName: gateway
+    user: gateway

@@ -170,6 +170,11 @@ export async function buildApp() {
 }
 
 async function bootstrap() {
+  if (process.env.RUN_MIGRATIONS_ON_START === "true") {
+    const { runMigrations } = await import("./migrate.js");
+    await runMigrations();
+    console.log("migrations applied");
+  }
   const app = await buildApp();
   // Graceful shutdown: stop accepting requests, finish in-flight ones, close DB/Redis.
   for (const signal of ["SIGTERM", "SIGINT"] as const) {

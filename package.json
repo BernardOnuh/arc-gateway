@@ -10,7 +10,10 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "migrate": "node dist/migrate.js"
+    "migrate": "node dist/migrate.js",
+    "stack:up": "docker compose -f docker-compose.prod.yml --env-file .env.localstack -p arc-local up -d --build",
+    "stack:down": "docker compose -f docker-compose.prod.yml --env-file .env.localstack -p arc-local down",
+    "stack:logs": "docker compose -f docker-compose.prod.yml --env-file .env.localstack -p arc-local logs -f api"
   },
   "keywords": [],
   "author": "",
