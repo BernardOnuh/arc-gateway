@@ -1,8 +1,8 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { API_KEY_STORAGE } from "./lib/auth";
-import { mockGateway, profile, renderApp } from "./test/render";
+import { LEGACY_API_KEY_STORAGE } from "./lib/auth";
+import { gatewaySession, mockGateway, profile, renderApp, startSession } from "./test/render";
 
 const GOOD_KEY = "gw_live_good";
 
@@ -55,8 +55,16 @@ describe("routing", () => {
   });
 });
 
+/** The key must only ever travel in the session-open body, never as a header or in storage. */
+function expectKeyNeverExposed(fetchMock: ReturnType<typeof mockGateway>) {
+  for (const [, init] of fetchMock.mock.calls) {
+    expect(new Headers(init?.headers).get("authorization")).toBeNull();
+  }
+  expect(Object.values({ ...window.localStorage })).not.toContain(GOOD_KEY);
+}
+
 describe("api-key login", () => {
-  it("validates the key, stores it, and returns to the page that was requested", async () => {
+  it("exchanges the key for a session cookie and returns to the page that was requested", async () => {
     const fetchMock = gatewayWithKey();
     renderApp("/app/customers");
     await userEvent.type(await screen.findByLabelText("API key"), `  ${GOOD_KEY}  `);
@@ -64,17 +72,20 @@ describe("api-key login", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Customers" })).toBeInTheDocument();
     expect(screen.getByText("Acme Pay")).toBeInTheDocument();
-    expect(window.localStorage.getItem(API_KEY_STORAGE)).toBe(GOOD_KEY);
-    expect(String(fetchMock.mock.calls[0][0])).toBe("http://localhost:3000/v1/partners/me");
+    expect(gatewaySession.key).toBe(GOOD_KEY);
+    const open = fetchMock.mock.calls.find(([u]) => String(u) === "http://localhost:3000/v1/dashboard/session")!;
+    expect(JSON.parse(String(open[1]!.body))).toEqual({ apiKey: GOOD_KEY });
+    expect(open[1]!.credentials).toBe("include");
+    expectKeyNeverExposed(fetchMock);
   });
 
-  it("rejects a wrong key without storing it", async () => {
+  it("rejects a wrong key without opening a session", async () => {
     gatewayWithKey();
     renderApp("/app/login");
     await userEvent.type(await screen.findByLabelText("API key"), "gw_live_wrong");
     await userEvent.click(screen.getByRole("button", { name: "Sign in" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("not accepted");
-    expect(window.localStorage.getItem(API_KEY_STORAGE)).toBeNull();
+    expect(gatewaySession.key).toBeNull();
   });
 
   it("explains legacy keys that are not linked to a partner", async () => {
@@ -95,22 +106,32 @@ describe("api-key login", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Can't reach the gateway");
   });
 
-  it("keeps a stored key across reloads and logs out", async () => {
-    gatewayWithKey();
-    window.localStorage.setItem(API_KEY_STORAGE, GOOD_KEY);
+  it("keeps the session across reloads and logs out", async () => {
+    const fetchMock = gatewayWithKey();
+    startSession(GOOD_KEY);
     renderApp("/app");
     expect(await screen.findByText("Fee 0.10% · 30 requests/min")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Log out" }));
     expect(await screen.findByRole("heading", { name: "Sign in to your dashboard" })).toBeInTheDocument();
-    expect(window.localStorage.getItem(API_KEY_STORAGE)).toBeNull();
+    await waitFor(() => expect(gatewaySession.key).toBeNull());
+    expectKeyNeverExposed(fetchMock);
   });
 
-  it("signs out when the stored key is no longer accepted", async () => {
+  it("sends signed-out visitors to login once the gateway says there is no session", async () => {
     gatewayWithKey();
-    window.localStorage.setItem(API_KEY_STORAGE, "gw_live_revoked");
+    startSession("gw_live_revoked");
     renderApp("/app");
-    await waitFor(() => expect(window.localStorage.getItem(API_KEY_STORAGE)).toBeNull());
     expect(await screen.findByRole("heading", { name: "Sign in to your dashboard" })).toBeInTheDocument();
+  });
+
+  it("moves a key left in localStorage by an older build into a session, then deletes it", async () => {
+    const fetchMock = gatewayWithKey();
+    window.localStorage.setItem(LEGACY_API_KEY_STORAGE, GOOD_KEY);
+    renderApp("/app");
+    expect(await screen.findByText("Fee 0.10% · 30 requests/min")).toBeInTheDocument();
+    expect(window.localStorage.getItem(LEGACY_API_KEY_STORAGE)).toBeNull();
+    expect(gatewaySession.key).toBe(GOOD_KEY);
+    expectKeyNeverExposed(fetchMock);
   });
 });

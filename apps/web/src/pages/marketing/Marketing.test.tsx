@@ -1,8 +1,7 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { API_KEY_STORAGE } from "../../lib/auth";
-import { chains, mockGateway, profile, renderApp, tokens } from "../../test/render";
+import { chains, gatewaySession, mockGateway, profile, renderApp, tokens } from "../../test/render";
 
 const NEW_KEY = "gw_live_brand_new_key";
 
@@ -42,6 +41,9 @@ describe("marketing pages", () => {
   });
 });
 
+const signupCall = (fetchMock: ReturnType<typeof mockGateway>) =>
+  fetchMock.mock.calls.find(([u, init]) => String(u).endsWith("/v1/partners") && init?.method === "POST")!;
+
 describe("signup", () => {
   function gateway(signup: (body: Record<string, unknown>) => { status: number; body: unknown }) {
     return mockGateway((url, init) => {
@@ -70,7 +72,7 @@ describe("signup", () => {
 
     expect(await screen.findByTestId("api-key")).toHaveTextContent(NEW_KEY);
     expect(screen.getByRole("note")).toHaveTextContent("shown only once");
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1]!.body))).toEqual({
+    expect(JSON.parse(String(signupCall(fetchMock)[1]!.body))).toEqual({
       partnerName: "Acme Pay",
       email: "billing@acme.example",
     });
@@ -84,7 +86,7 @@ describe("signup", () => {
 
     await user.click(proceed);
     expect(await screen.findByText(/Signed in as/)).toBeInTheDocument();
-    expect(window.localStorage.getItem(API_KEY_STORAGE)).toBe(NEW_KEY);
+    expect(gatewaySession.key).toBe(NEW_KEY);
   });
 
   it("omits an empty email", async () => {
@@ -97,7 +99,7 @@ describe("signup", () => {
     await user.type(screen.getByLabelText("Business name"), "Acme Pay");
     await user.click(screen.getByRole("button", { name: "Create account" }));
     await screen.findByTestId("api-key");
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1]!.body))).toEqual({ partnerName: "Acme Pay" });
+    expect(JSON.parse(String(signupCall(fetchMock)[1]!.body))).toEqual({ partnerName: "Acme Pay" });
   });
 
   it("explains a duplicate email (409)", async () => {

@@ -368,7 +368,16 @@ All lists return `{ "items": [...], "total": n, "limit": 50, "offset": 0 }`, new
 
 SDK: `client.listCustomers()`, `client.listQuotes()`, `client.listIntents()`, `client.me()`.
 
-**CORS:** browser origins allowed via `CORS_ORIGINS` (comma-separated, default `http://localhost:5173`, `*` = any). Methods `GET, POST`; headers `authorization, content-type`.
+**CORS:** browser origins allowed via `CORS_ORIGINS` (comma-separated, default `http://localhost:5173`, `*` = any). Methods `GET, POST`; headers `authorization, content-type, x-arc-dashboard`. `CORS_ORIGINS` responses allow credentials (the session cookie); widget routes and `*` never do.
+
+### Dashboard session (cookie)
+
+| Method | Path | Notes |
+|---|---|---|
+| `POST` | `/v1/dashboard/session` | Body `{ apiKey }` (secret key). Sets `arc_session` (httpOnly, SameSite=Lax by default, Secure in production, 7 days), returns `{ expiresAt }`. `401` bad key, `403` publishable key, `400` legacy key. 10/min/IP. |
+| `POST` | `/v1/dashboard/session/logout` | Deletes the session and clears the cookie. Safe when signed out. |
+
+Every `requireApiKey` route accepts the cookie in place of a bearer key, but only with `x-arc-dashboard: 1` (CSRF guard: cross-site pages can't add it without a preflight that only `CORS_ORIGINS` passes); a bearer header always wins. Only the sha256 of the `ps_` token is stored (`partner_sessions`). A session acts as the key it was opened with: revoking that key ends it, and rotating from the dashboard moves it to the new key. Env: `SESSION_COOKIE_SECURE`, `SESSION_COOKIE_SAMESITE` (`none` requires Secure, for a dashboard on a different site).
 
 ### API keys (partner secret key required) — built in step 5
 
@@ -402,5 +411,4 @@ The plan's `/v1/customers/:id/password|wallet` became session-scoped `/v1/custom
 - Email delivery for setup/reset links (the dashboard shows the link for the partner to send).
 - Fee payouts to customer wallets (wallets are stored; `payoutsEnabled` is false).
 - Verifying `signedPayload` on submit (currently unused; the gateway wallet signs).
-- Exchanging the dashboard API key for an httpOnly session cookie.
 - `packages/api-client` (OpenAPI-generated types) — deferred per §0.

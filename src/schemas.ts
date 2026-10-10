@@ -343,6 +343,16 @@ export const apiKeyRevokeSchema = z.object({
   keyId: z.string().uuid().describe("Id of the key to revoke, from GET /v1/partners/me/api-keys."),
 });
 
+// ----- dashboard session -----
+
+export const dashboardSessionCreateSchema = z.object({
+  apiKey: z.string().min(1).max(200).describe("Your secret key (gw_live_...). It is exchanged for a cookie and not stored."),
+});
+
+export const dashboardSessionResponseSchema = z.object({
+  expiresAt: z.string().describe("When the session cookie stops working (ISO 8601)."),
+});
+
 // ----- customer accounts -----
 
 const passwordSchema = z.string().min(10, "password must be at least 10 characters").max(200);

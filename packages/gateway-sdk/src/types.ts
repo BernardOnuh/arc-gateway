@@ -254,3 +254,8 @@ export interface RotateApiKeyResult {
 export interface CreatePublishableKeyParams {
   allowedOrigins: string[];
 }
+
+export interface DashboardSession {
+  /** ISO 8601 time the session cookie expires. */
+  expiresAt: string;
+}

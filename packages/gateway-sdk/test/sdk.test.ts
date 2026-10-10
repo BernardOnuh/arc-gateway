@@ -170,6 +170,32 @@ describe("GatewayClient", () => {
     ]);
   });
 
+  it("cookie-session clients send credentials and extra headers, never a bearer", async () => {
+    const calls: Call[] = [];
+    const fetchImpl = async (url: string, init: any) => {
+      calls.push({ url, init });
+      return { ok: true, status: 200, text: async () => JSON.stringify({ expiresAt: "2026-10-17T00:00:00.000Z" }) } as Response;
+    };
+    const client = new GatewayClient({
+      baseUrl: "http://gw.test",
+      fetchImpl,
+      credentials: "include",
+      headers: { "x-arc-dashboard": "1" },
+    });
+    await client.openDashboardSession("gw_live_secret");
+    expect(calls[0].url).toBe("http://gw.test/v1/dashboard/session");
+    expect((calls[0].init as any).credentials).toBe("include");
+    expect(calls[0].init.headers!["x-arc-dashboard"]).toBe("1");
+    expect(calls[0].init.headers!["authorization"]).toBeUndefined();
+    expect(JSON.parse(calls[0].init.body!)).toEqual({ apiKey: "gw_live_secret" });
+
+    await client.me();
+    expect(calls[1].init.headers!["authorization"]).toBeUndefined();
+    await client.closeDashboardSession();
+    expect(calls[2].url).toBe("http://gw.test/v1/dashboard/session/logout");
+    expect(calls[2].init.method).toBe("POST");
+  });
+
   it("default fetch is called without the client bound as this", async () => {
     const original = globalThis.fetch;
     let receiver: unknown = "unset";

@@ -12,6 +12,7 @@ export type {
   Customer,
   CustomerAccount,
   CustomerSession,
+  DashboardSession,
   Intent,
   IntentListItem,
   IntentStatus,

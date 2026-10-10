@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ApiKeySummary } from "@arc/gateway-sdk";
 import { CopyButton } from "../CopyButton";
-import { useAuth, useGateway } from "../../lib/auth";
+import { useGateway } from "../../lib/auth";
 import { describeError } from "../../lib/gateway";
 import { formatDate } from "../../lib/format";
 import { useApiKeys, useCreatePublishableKey, useRevokeApiKey } from "../../lib/queries";
@@ -55,8 +56,8 @@ export function SecretKeyCard() {
 }
 
 function RotateKey() {
-  const { client } = useGateway();
-  const { adoptKey } = useAuth();
+  const { client, scope } = useGateway();
+  const queryClient = useQueryClient();
   const [stage, setStage] = useState<"idle" | "confirm" | "working">("idle");
   const [newKey, setNewKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,10 +67,11 @@ function RotateKey() {
     setError(null);
     try {
       const { apiKey } = await client.rotateApiKey();
-      // The old key is already revoked: switch this session over immediately
-      // (no network call that could fail and lose the new key), then show it once.
+      // The gateway moved this session onto the new key; show the key once
+      // and refresh what depends on which key is current.
       setNewKey(apiKey);
-      adoptKey(apiKey);
+      void queryClient.invalidateQueries({ queryKey: ["me", scope] });
+      void queryClient.invalidateQueries({ queryKey: ["api-keys", scope] });
       setStage("idle");
     } catch (err) {
       setError(describeError(err));

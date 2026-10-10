@@ -11,35 +11,35 @@ import { useGateway } from "./auth";
 import { publicClient } from "./gateway";
 
 export function usePartnerProfile() {
-  const { client, apiKey } = useGateway();
-  return useQuery({ queryKey: ["me", apiKey], queryFn: () => client.me() });
+  const { client, scope } = useGateway();
+  return useQuery({ queryKey: ["me", scope], queryFn: () => client.me() });
 }
 
 export function useLedger(customerId?: string) {
-  const { client, apiKey } = useGateway();
+  const { client, scope } = useGateway();
   return useQuery({
-    queryKey: ["ledger", apiKey, customerId ?? null],
+    queryKey: ["ledger", scope, customerId ?? null],
     queryFn: () => client.ledger(customerId),
   });
 }
 
 export function useCustomers(params: PageParams) {
-  const { client, apiKey } = useGateway();
+  const { client, scope } = useGateway();
   return useQuery({
-    queryKey: ["customers", apiKey, params],
+    queryKey: ["customers", scope, params],
     queryFn: () => client.listCustomers(params),
     placeholderData: keepPreviousData,
   });
 }
 
 export function useCreateCustomer() {
-  const { client, apiKey } = useGateway();
+  const { client, scope } = useGateway();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (params: CreateCustomerParams) => client.createCustomer(params),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["customers", apiKey] });
-      void queryClient.invalidateQueries({ queryKey: ["ledger", apiKey] });
+      void queryClient.invalidateQueries({ queryKey: ["customers", scope] });
+      void queryClient.invalidateQueries({ queryKey: ["ledger", scope] });
     },
   });
 }
@@ -47,9 +47,9 @@ export function useCreateCustomer() {
 const ACTIVE_STATUSES = new Set(["PENDING", "ORIGIN_CONFIRMED", "FILLED"]);
 
 export function useQuotes(params: ListQuotesParams) {
-  const { client, apiKey } = useGateway();
+  const { client, scope } = useGateway();
   return useQuery({
-    queryKey: ["quotes", apiKey, params],
+    queryKey: ["quotes", scope, params],
     queryFn: () => client.listQuotes(params),
     placeholderData: keepPreviousData,
     // Keep in-flight intents moving without a manual refresh.
@@ -59,9 +59,9 @@ export function useQuotes(params: ListQuotesParams) {
 }
 
 export function useIntents(params: ListIntentsParams) {
-  const { client, apiKey } = useGateway();
+  const { client, scope } = useGateway();
   return useQuery({
-    queryKey: ["intents", apiKey, params],
+    queryKey: ["intents", scope, params],
     queryFn: () => client.listIntents(params),
     placeholderData: keepPreviousData,
     refetchInterval: (q) => (q.state.data?.items.some((i) => ACTIVE_STATUSES.has(i.status)) ? 10_000 : false),
@@ -90,33 +90,33 @@ export function useCatalog(): Catalog {
 }
 
 export function useApiKeys() {
-  const { client, apiKey } = useGateway();
-  return useQuery({ queryKey: ["api-keys", apiKey], queryFn: () => client.listApiKeys() });
+  const { client, scope } = useGateway();
+  return useQuery({ queryKey: ["api-keys", scope], queryFn: () => client.listApiKeys() });
 }
 
 export function useCreatePublishableKey() {
-  const { client, apiKey } = useGateway();
+  const { client, scope } = useGateway();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (allowedOrigins: string[]) => client.createPublishableKey({ allowedOrigins }),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["api-keys", apiKey] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["api-keys", scope] }),
   });
 }
 
 export function useRevokeApiKey() {
-  const { client, apiKey } = useGateway();
+  const { client, scope } = useGateway();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (keyId: string) => client.revokeApiKey(keyId),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["api-keys", apiKey] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["api-keys", scope] }),
   });
 }
 
 export function useCreateSetupLink() {
-  const { client, apiKey } = useGateway();
+  const { client, scope } = useGateway();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (customerId: string) => client.createSetupLink(customerId),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["customers", apiKey] }),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["customers", scope] }),
   });
 }

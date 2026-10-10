@@ -1,24 +1,37 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { GatewayError, type GatewayClient, type PartnerProfile } from "@arc/gateway-sdk";
-import { createGatewayClient } from "./gateway";
+import { sessionClient } from "./gateway";
 import { readStored, writeStored } from "./storage";
 
 /**
- * Dashboard auth is the partner's secret API key, kept in localStorage so a
- * reload stays signed in. Tradeoff: any script running on this origin (XSS,
- * a malicious dependency) could read it. Acceptable for the MVP; the plan is
- * to exchange the key for an httpOnly session cookie later.
+ * Dashboard auth: the partner's secret key is exchanged once for an httpOnly
+ * session cookie (POST /v1/dashboard/session) and then forgotten, so scripts
+ * on this origin can't read it. Whether we're signed in is only known by
+ * asking the gateway (GET /v1/partners/me), hence the "checking" state.
  */
-export const API_KEY_STORAGE = "arc-gateway.apiKey";
+
+/** Where builds before cookie sessions kept the raw key; migrated once, then cleared. */
+export const LEGACY_API_KEY_STORAGE = "arc-gateway.apiKey";
+
+export type AuthStatus = "checking" | "signedIn" | "signedOut";
 
 interface AuthState {
-  apiKey: string | null;
-  client: GatewayClient | null;
-  /** Validates the key against GET /v1/partners/me, then stores it. */
+  status: AuthStatus;
+  /** Signed-in partner; scopes cached queries so accounts never share data. */
+  partnerId: string | null;
+  client: GatewayClient;
+  /** Opens a session with the key, loads the profile, and signs in. */
   login: (apiKey: string) => Promise<PartnerProfile>;
-  /** Switch to a key the gateway just issued (rotation), without a round trip. */
-  adoptKey: (apiKey: string) => void;
   logout: () => void;
 }
 
@@ -28,62 +41,74 @@ export class LoginError extends Error {}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
-  const [apiKey, setApiKey] = useState<string | null>(() => readStored(API_KEY_STORAGE));
+  const [status, setStatus] = useState<AuthStatus>("checking");
+  const [partnerId, setPartnerId] = useState<string | null>(null);
+  // A logout still in flight could clear a cookie set by a quick re-login.
+  const pendingLogout = useRef<Promise<unknown>>(Promise.resolve());
+
+  const signIn = useCallback(
+    (profile: PartnerProfile) => {
+      queryClient.setQueryData(["me", profile.partnerId], profile);
+      setPartnerId(profile.partnerId);
+      setStatus("signedIn");
+    },
+    [queryClient]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const legacyKey = readStored(LEGACY_API_KEY_STORAGE);
+      if (legacyKey) {
+        writeStored(LEGACY_API_KEY_STORAGE, null);
+        await sessionClient.openDashboardSession(legacyKey).catch(() => undefined);
+      }
+      try {
+        const profile = await sessionClient.me();
+        if (!cancelled) signIn(profile);
+      } catch {
+        if (!cancelled) setStatus("signedOut");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [signIn]);
 
   const login = useCallback(
     async (rawKey: string) => {
       const key = rawKey.trim();
       if (!key) throw new LoginError("Enter your API key.");
-      const client = createGatewayClient(key);
-      let profile: PartnerProfile;
+      await pendingLogout.current;
       try {
-        profile = await client.me();
+        await sessionClient.openDashboardSession(key);
       } catch (err) {
         if (err instanceof GatewayError && err.statusCode === 400) {
-          throw new LoginError(
-            "This key isn't linked to a partner account. Use the key from signup."
-          );
+          throw new LoginError("This key isn't linked to a partner account. Use the key from signup.");
+        }
+        if (err instanceof GatewayError && err.statusCode === 403) {
+          throw new LoginError("That's a publishable key. Sign in with your secret key (gw_live_…).");
         }
         throw err;
       }
+      const profile = await sessionClient.me();
       queryClient.clear();
-      queryClient.setQueryData(["me", key], profile);
-      writeStored(API_KEY_STORAGE, key);
-      setApiKey(key);
+      signIn(profile);
       return profile;
     },
-    [queryClient]
-  );
-
-  const adoptKey = useCallback(
-    (key: string) => {
-      // Same partner, so carry the profile over (no loading flash), then
-      // drop everything cached under the revoked key.
-      const old = readStored(API_KEY_STORAGE);
-      const me = old ? queryClient.getQueryData<PartnerProfile>(["me", old]) : undefined;
-      if (me) queryClient.setQueryData(["me", key], me);
-      if (old) queryClient.removeQueries({ predicate: (q) => q.queryKey[1] === old });
-      writeStored(API_KEY_STORAGE, key);
-      setApiKey(key);
-    },
-    [queryClient]
+    [queryClient, signIn]
   );
 
   const logout = useCallback(() => {
-    writeStored(API_KEY_STORAGE, null);
-    setApiKey(null);
+    setStatus("signedOut");
+    setPartnerId(null);
     queryClient.clear();
+    pendingLogout.current = sessionClient.closeDashboardSession().catch(() => undefined);
   }, [queryClient]);
 
   const value = useMemo<AuthState>(
-    () => ({
-      apiKey,
-      client: apiKey ? createGatewayClient(apiKey) : null,
-      login,
-      adoptKey,
-      logout,
-    }),
-    [apiKey, login, adoptKey, logout]
+    () => ({ status, partnerId, client: sessionClient, login, logout }),
+    [status, partnerId, login, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -96,8 +121,8 @@ export function useAuth(): AuthState {
 }
 
 /** Client for authenticated pages; only call under <RequireAuth>. */
-export function useGateway(): { client: GatewayClient; apiKey: string } {
-  const { client, apiKey } = useAuth();
-  if (!client || !apiKey) throw new Error("useGateway called without a signed-in partner");
-  return { client, apiKey };
+export function useGateway(): { client: GatewayClient; scope: string } {
+  const { client, partnerId, status } = useAuth();
+  if (status !== "signedIn" || !partnerId) throw new Error("useGateway called without a signed-in partner");
+  return { client, scope: partnerId };
 }

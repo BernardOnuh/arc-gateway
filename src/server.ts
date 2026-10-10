@@ -1,16 +1,19 @@
 import Fastify, { type RouteOptions } from "fastify";
 import { Redis } from "ioredis";
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
 import { config } from "./config.js";
 import { requireApiKey } from "./auth/apiKey.js";
+import { DASHBOARD_HEADER } from "./auth/partnerSession.js";
 import { globalRateLimitOptions } from "./auth/rateLimit.js";
 import { metaRoutes, type EndpointInfo } from "./routes/meta.js";
 import { catalogRoutes } from "./routes/catalog.js";
 import { partnerRoutes } from "./routes/partners.js";
 import { apiKeyRoutes } from "./routes/apiKeys.js";
+import { dashboardSessionRoutes } from "./routes/dashboardSession.js";
 import { customerRoutes } from "./routes/customers.js";
 import { customerAccountRoutes } from "./routes/customerAccounts.js";
 import { ledgerRoutes } from "./routes/ledger.js";
@@ -70,6 +73,7 @@ export async function buildApp() {
       components: {
         securitySchemes: {
           bearerAuth: { type: "http", scheme: "bearer", description: "Partner API key (gw_live_...)" },
+          dashboardSession: { type: "apiKey", in: "cookie", name: "arc_session", description: "Dashboard session from POST /v1/dashboard/session; send x-arc-dashboard: 1 with it" },
           customerSession: { type: "http", scheme: "bearer", description: "Customer session token (cs_...) from /v1/customer-auth" },
         },
       },
@@ -86,18 +90,24 @@ export async function buildApp() {
   });
   await app.register(swaggerUi, { routePrefix: "/docs" });
 
-  const dashboardOrigins = config.corsOrigins.includes("*") ? true : config.corsOrigins;
+  await app.register(cookie);
+
+  const wildcard = config.corsOrigins.includes("*");
+  const dashboardOrigins = wildcard ? true : config.corsOrigins;
   await app.register(cors, {
     // Widget routes answer any origin at the CORS layer; publishable keys then
     // enforce their own per-key origin allowlist (auth/apiKey.ts). Everything
-    // else is limited to CORS_ORIGINS (the dashboard).
+    // else is limited to CORS_ORIGINS (the dashboard), which alone may send
+    // the session cookie. Widget responses never allow credentials.
     delegator: (req, cb) => {
       const method =
         req.method === "OPTIONS" ? String(req.headers["access-control-request-method"] ?? "") : req.method;
+      const widget = isWidgetRoute(method, req.url ?? "");
       cb(null, {
-        origin: isWidgetRoute(method, req.url ?? "") ? true : dashboardOrigins,
+        origin: widget ? true : dashboardOrigins,
+        credentials: !widget && !wildcard,
         methods: ["GET", "POST"],
-        allowedHeaders: ["authorization", "content-type"],
+        allowedHeaders: ["authorization", "content-type", DASHBOARD_HEADER],
         maxAge: 600,
       });
     },
@@ -111,6 +121,7 @@ export async function buildApp() {
   await catalogRoutes(app);
   await partnerRoutes(app);
   await apiKeyRoutes(app);
+  await dashboardSessionRoutes(app);
   await customerRoutes(app);
   await customerAccountRoutes(app);
   await ledgerRoutes(app);

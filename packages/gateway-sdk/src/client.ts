@@ -5,6 +5,7 @@ import type {
   CreatePublishableKeyParams,
   CreateCustomerParams,
   Customer,
+  DashboardSession,
   Intent,
   IntentListItem,
   Ledger,
@@ -29,6 +30,10 @@ export interface GatewayClientOptions {
   baseUrl?: string;
   apiKey?: string;
   fetchImpl?: typeof fetch;
+  /** Browser only: "include" sends the dashboard session cookie cross-origin. */
+  credentials?: RequestCredentials;
+  /** Extra headers on every request (e.g. x-arc-dashboard for cookie sessions). */
+  headers?: Record<string, string>;
 }
 
 export interface PollOptions {
@@ -40,6 +45,8 @@ export interface PollOptions {
 export class GatewayClient {
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof fetch;
+  private readonly credentials?: RequestCredentials;
+  private readonly extraHeaders: Record<string, string>;
   readonly apiKey?: string;
 
   constructor(options: GatewayClientOptions = {}) {
@@ -48,6 +55,8 @@ export class GatewayClient {
     // browsers throw "Illegal invocation" for a detached window.fetch.
     this.fetchImpl = options.fetchImpl ?? ((input, init) => fetch(input, init));
     this.apiKey = options.apiKey;
+    this.credentials = options.credentials;
+    this.extraHeaders = options.headers ?? {};
   }
 
   protected resolveKey(apiKey?: string): string | undefined {
@@ -74,7 +83,7 @@ export class GatewayClient {
       if (qs) url += `?${qs}`;
     }
 
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...this.extraHeaders };
     if (!options.skipAuth) {
       const key = this.resolveKey(options.apiKey);
       if (key) headers.authorization = `Bearer ${key}`;
@@ -84,6 +93,7 @@ export class GatewayClient {
     const res = await this.fetchImpl(url, {
       method,
       headers,
+      ...(this.credentials ? { credentials: this.credentials } : {}),
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
     const text = await res.text();
@@ -101,6 +111,15 @@ export class GatewayClient {
 
   registerPartner(params: RegisterPartnerParams): Promise<RegisterPartnerResult> {
     return this.request("POST", "/v1/partners", { body: params, skipAuth: true });
+  }
+
+  /** Exchanges a secret key for an httpOnly session cookie (browser dashboards). */
+  openDashboardSession(apiKey: string): Promise<DashboardSession> {
+    return this.request("POST", "/v1/dashboard/session", { body: { apiKey }, skipAuth: true });
+  }
+
+  closeDashboardSession(): Promise<{ ok: true }> {
+    return this.request("POST", "/v1/dashboard/session/logout", { skipAuth: true });
   }
 
   me(apiKey?: string): Promise<PartnerProfile> {

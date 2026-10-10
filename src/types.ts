@@ -11,6 +11,8 @@ declare module "fastify" {
   }
   interface FastifyRequest {
     apiKey?: typeof apiKeys.$inferSelect;
+    /** Set when requireApiKey authenticated via the dashboard session cookie. */
+    partnerSessionId?: string;
     /** Set by requireCustomerSession. */
     customer?: typeof customers.$inferSelect;
     customerSessionId?: string;

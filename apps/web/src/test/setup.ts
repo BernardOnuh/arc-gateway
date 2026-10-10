@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, beforeEach, vi } from "vitest";
+import { gatewaySession } from "./render";
 
 // Never let a test reach a real gateway: unmocked requests fail fast.
 beforeEach(() => {
@@ -14,4 +15,5 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   window.localStorage.clear();
+  gatewaySession.key = null;
 });

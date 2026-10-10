@@ -2,8 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type { Ledger } from "@arc/gateway-sdk";
-import { API_KEY_STORAGE } from "../../lib/auth";
-import { chains, mockGateway, profile, renderApp, tokens } from "../../test/render";
+import { chains, gatewaySession, mockGateway, profile, renderApp, startSession, tokens } from "../../test/render";
 import { ledgerToCsv } from "./Ledger";
 
 const KEY = "gw_live_dash";
@@ -113,7 +112,7 @@ const secretKeyRow = {
 };
 
 function signedIn(overrides: Record<string, (url: URL, init: RequestInit) => { status: number; body: unknown }> = {}) {
-  window.localStorage.setItem(API_KEY_STORAGE, KEY);
+  startSession(KEY);
   const customers = [customer];
   const keys: Record<string, unknown>[] = [secretKeyRow];
   return mockGateway((url, init) => {
@@ -305,12 +304,13 @@ describe("settings", () => {
     await user.click(screen.getByRole("button", { name: "Rotate now" }));
 
     expect(await screen.findByTestId("new-api-key")).toHaveTextContent(NEW);
-    expect(window.localStorage.getItem(API_KEY_STORAGE)).toBe(NEW);
-    // Later requests use the new key.
-    await waitFor(() => {
-      const last = fetchMock.mock.calls.at(-1)!;
-      expect(new Headers(last[1]!.headers).get("authorization")).toBe(`Bearer ${NEW}`);
-    });
+    // The gateway moved the session to the new key; the app keeps no copy and stays signed in.
+    expect(gatewaySession.key).toBe(NEW);
+    expect(Object.values({ ...window.localStorage })).not.toContain(NEW);
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.filter(([u]) => String(u).endsWith("/v1/partners/me")).length).toBeGreaterThan(1)
+    );
+    expect(screen.getByText(/Signed in as/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "I've stored it" }));
     expect(screen.queryByTestId("new-api-key")).not.toBeInTheDocument();
   });

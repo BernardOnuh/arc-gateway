@@ -5,7 +5,7 @@ import { LoginError, useAuth } from "../../lib/auth";
 import { describeError } from "../../lib/gateway";
 
 export function Login() {
-  const { apiKey, login } = useAuth();
+  const { status, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? "/app";
@@ -13,7 +13,7 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  if (apiKey) return <Navigate to={from} replace />;
+  if (status === "signedIn") return <Navigate to={from} replace />;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -64,7 +64,7 @@ export function Login() {
             {pending ? "Checking…" : "Sign in"}
           </button>
           <p className="mt-4 text-xs text-slate-500">
-            Your key is stored in this browser only. Log out on shared computers.
+            Your key is swapped for a secure session cookie and isn't saved in this browser. Log out on shared computers.
           </p>
         </form>
         <p className="mt-4 text-center text-sm text-slate-600">

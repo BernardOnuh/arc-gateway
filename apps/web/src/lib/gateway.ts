@@ -8,6 +8,16 @@ export function createGatewayClient(apiKey?: string): GatewayClient {
 /** Unauthenticated client for public endpoints (chains, tokens, signup). */
 export const publicClient = createGatewayClient();
 
+/**
+ * Dashboard client: authenticated by the httpOnly session cookie. The
+ * x-arc-dashboard header is the gateway's CSRF check for cookie requests.
+ */
+export const sessionClient = new GatewayClient({
+  baseUrl: GATEWAY_URL,
+  credentials: "include",
+  headers: { "x-arc-dashboard": "1" },
+});
+
 /** Turn any thrown value into a sentence a partner can act on. */
 export function describeError(err: unknown): string {
   if (err instanceof GatewayError) {

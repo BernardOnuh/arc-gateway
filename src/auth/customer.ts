@@ -42,7 +42,7 @@ export function dummyPasswordHash(): Promise<string> {
 export const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 
 /** Opaque random token with a readable prefix; only its sha256 is stored. */
-export function generateToken(prefix: "cs_" | "cst_"): { raw: string; hash: string } {
+export function generateToken(prefix: "cs_" | "cst_" | "ps_"): { raw: string; hash: string } {
   const raw = `${prefix}${randomBytes(32).toString("base64url")}`;
   return { raw, hash: sha256(raw) };
 }

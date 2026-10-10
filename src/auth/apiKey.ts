@@ -3,6 +3,7 @@ import { FastifyRequest, FastifyReply, onRequestHookHandler } from "fastify";
 import { db } from "../db/index.js";
 import { apiKeys } from "../db/schema.js";
 import { eq, and, inArray, type AnyColumn, type SQL } from "drizzle-orm";
+import { DASHBOARD_HEADER, SESSION_COOKIE, findPartnerSession } from "./partnerSession.js";
 
 export type ApiKeyRow = typeof apiKeys.$inferSelect;
 export type ApiKeyKind = "secret" | "publishable";
@@ -70,33 +71,41 @@ async function enforcePartnerRateLimit(
   return true;
 }
 
-export async function authenticateApiKey(request: FastifyRequest, reply: FastifyReply) {
-  const auth = request.headers.authorization;
-  if (!auth || !auth.startsWith("Bearer ")) {
-    return reply.code(401).send({ error: "unauthorized" });
-  }
-  const token = auth.substring("Bearer ".length).trim();
-  if (!token) {
-    return reply.code(401).send({ error: "unauthorized" });
-  }
-
+/** The active key for a raw gw_live_/pk_live_ token, or null. */
+export async function findActiveKey(token: string): Promise<ApiKeyRow | null> {
   const prefix = token.slice(0, 8);
   const results = await db
     .select()
     .from(apiKeys)
     .where(and(eq(apiKeys.keyPrefix, prefix), eq(apiKeys.active, true)));
-  if (results.length === 0) {
-    return reply.code(401).send({ error: "unauthorized" });
-  }
-
-  const computed = createHash("sha256").update(token).digest("hex");
-  let matched: ApiKeyRow | null = null;
+  const calc = Buffer.from(createHash("sha256").update(token).digest("hex"));
   for (const key of results) {
     const stored = Buffer.from(key.keyHash);
-    const calc = Buffer.from(computed);
-    if (stored.length === calc.length && timingSafeEqual(stored, calc)) {
-      matched = key;
-      break;
+    if (stored.length === calc.length && timingSafeEqual(stored, calc)) return key;
+  }
+  return null;
+}
+
+/**
+ * Bearer key first (servers, the widget); otherwise the dashboard session
+ * cookie, which only counts alongside the DASHBOARD_HEADER (CSRF guard).
+ */
+export async function authenticateApiKey(request: FastifyRequest, reply: FastifyReply) {
+  const auth = request.headers.authorization;
+  const cookie = request.cookies?.[SESSION_COOKIE];
+  let matched: ApiKeyRow | null = null;
+
+  if (auth) {
+    const token = auth.startsWith("Bearer ") ? auth.substring("Bearer ".length).trim() : "";
+    if (token) matched = await findActiveKey(token);
+  } else if (cookie) {
+    if (request.headers[DASHBOARD_HEADER] !== "1") {
+      return reply.code(403).send({ error: `cookie sessions require the ${DASHBOARD_HEADER} header` });
+    }
+    const session = await findPartnerSession(cookie);
+    if (session) {
+      matched = session.key;
+      request.partnerSessionId = session.sessionId;
     }
   }
   if (!matched) {

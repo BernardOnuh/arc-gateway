@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { and, desc, eq } from "drizzle-orm";
 import { generateApiKey, requireApiKey, type ApiKeyRow } from "../auth/apiKey.js";
 import { db } from "../db/index.js";
-import { apiKeys } from "../db/schema.js";
+import { apiKeys, partnerSessions } from "../db/schema.js";
 import {
   apiKeyListResponseSchema,
   apiKeyRevokeSchema,
@@ -110,6 +110,13 @@ export async function apiKeyRoutes(app: FastifyInstance) {
             active: true,
           })
           .returning();
+        // Rotating from the dashboard keeps you signed in: the session follows the new key.
+        if (request.partnerSessionId) {
+          await tx
+            .update(partnerSessions)
+            .set({ apiKeyId: row.id })
+            .where(eq(partnerSessions.id, request.partnerSessionId));
+        }
         return row;
       });
       if (!created) return reply.code(401).send({ error: "unauthorized" });

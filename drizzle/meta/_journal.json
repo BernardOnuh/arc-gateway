@@ -36,6 +36,13 @@
       "when": 1791478994273,
       "tag": "0004_rapid_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791598489135,
+      "tag": "0005_outgoing_sandman",
+      "breakpoints": true
     }
   ]
 }

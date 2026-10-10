@@ -103,6 +103,21 @@ export const apiKeys = pgTable(
   })
 );
 
+/**
+ * Dashboard sessions: the partner trades their secret key for an httpOnly
+ * cookie once, so the key never sits in browser storage. A session acts as
+ * the key it was opened with and dies with it (revoke); rotate moves it to the new key.
+ */
+export const partnerSessions = pgTable("partner_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  apiKeyId: uuid("api_key_id")
+    .notNull()
+    .references(() => apiKeys.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const quotes = pgTable("quotes", {
   id: uuid("id").primaryKey().defaultRandom(),
   apiKeyId: uuid("api_key_id")
