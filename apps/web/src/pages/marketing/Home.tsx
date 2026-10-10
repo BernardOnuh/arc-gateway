@@ -104,11 +104,7 @@ export function Home() {
           <div className="mt-14 animate-rise [animation-delay:380ms] sm:mt-16">
             <div
               ref={heroPreview}
-              className="glass mx-auto max-w-5xl origin-bottom rounded-t-[34px] p-2 pb-0 will-change-transform sm:p-3 sm:pb-0"
-              style={{
-                transform:
-                  "perspective(1400px) translateY(calc((1 - var(--p, 0)) * -110px)) rotateX(calc((1 - var(--p, 0)) * 40deg)) scale(calc(0.86 + var(--p, 0) * 0.14))",
-              }}
+              className="hero-tilt glass mx-auto max-w-5xl origin-bottom rounded-t-[34px] p-2 pb-0 will-change-transform sm:p-3 sm:pb-0"
             >
               <ProductPreview className="rounded-b-none text-left" />
             </div>
@@ -140,7 +136,8 @@ export function Home() {
               See the full flow <IconArrowRight size={18} />
             </Link>
           </Reveal>
-          <div className="relative -mr-4 sm:-mr-40 lg:-mr-72">
+          {/* Phones skip this second preview: it would only repeat the hero's. */}
+          <div className="relative hidden sm:-mr-40 sm:block lg:-mr-72">
             <div aria-hidden className="absolute -inset-10 rounded-full bg-brand-400/25 blur-3xl dark:bg-brand-500/20" />
             <div className="animate-float [animation-duration:9s]">
               <div

@@ -144,3 +144,20 @@
 .dark .ring-amber-200 { --tw-ring-color: rgb(251 191 36 / 0.35); border-color: rgb(251 191 36 / 0.35); }
 .dark .ring-emerald-200 { --tw-ring-color: rgb(52 211 153 / 0.3); }
 .dark .ring-blue-200 { --tw-ring-color: rgb(96 165 250 / 0.3); }
+
+/* Hero preview: on wider screens it starts high and leaning back, then settles as you scroll.
+   Phones show it flat, since the tilt leaves a tall empty gap at that width. */
+@media (min-width: 640px) {
+  .hero-tilt {
+    transform: perspective(1400px) translateY(calc((1 - var(--p, 0)) * -110px))
+      rotateX(calc((1 - var(--p, 0)) * 40deg)) scale(calc(0.86 + var(--p, 0) * 0.14));
+  }
+}
+
+/* Phones: data tables keep each cell on one line and scroll sideways in their wrapper. */
+@media (max-width: 767px) {
+  .overflow-x-auto > table th,
+  .overflow-x-auto > table td {
+    white-space: nowrap;
+  }
+}
