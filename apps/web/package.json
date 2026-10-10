@@ -5,9 +5,9 @@
   "description": "Stableflowr marketing site and partner dashboard",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "pnpm --filter \"@arc/web^...\" build && pnpm run build:app",
-    "build:app": "tsc -p tsconfig.json && vite build",
+    "dev": "node init && vite",
+    "build": "node init && pnpm --filter \"@arc/web^...\" build && pnpm run build:app",
+    "build:app": "node init && tsc -p tsconfig.json && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"

@@ -26,8 +26,12 @@ export function describeError(err: unknown): string {
         ? String((err.body as { error: unknown }).error)
         : undefined;
     switch (err.statusCode) {
+      // The web app authenticates with session cookies (API-key sign-in has its
+      // own messages in auth.tsx), so a bare 401 means the session is gone.
       case 401:
-        return "That API key was not accepted. Check it and try again.";
+        return reason && reason !== "unauthorized"
+          ? reason.charAt(0).toUpperCase() + reason.slice(1) + "."
+          : "Your session has ended. Sign in again to continue.";
       case 429:
         return "Too many requests. Wait a minute and try again.";
       case 0:

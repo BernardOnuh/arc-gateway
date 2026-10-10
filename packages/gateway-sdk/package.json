@@ -44,7 +44,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && esbuild src/index.ts --bundle --platform=neutral --format=cjs --target=es2022 --outfile=dist/cjs/index.js && node scripts/mark-cjs.mjs",
+    "build": "node init && rm -rf dist && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && esbuild src/index.ts --bundle --platform=neutral --format=cjs --target=es2022 --outfile=dist/cjs/index.js && node scripts/mark-cjs.mjs",
     "test": "vitest run",
     "smoke": "tsx scripts/smoke.ts",
     "prepublishOnly": "pnpm test && pnpm build"
