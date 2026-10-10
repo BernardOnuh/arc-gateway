@@ -22,7 +22,7 @@ export function Signup() {
     <div className="relative overflow-hidden">
       <SkyBackdrop />
       <div className="relative mx-auto max-w-xl px-4 pb-24 pt-32 sm:pt-40">
-        <p className="mb-6 text-center text-lg font-medium tracking-wide text-white/90">Live in minutes, not weeks.</p>
+        <p className="mb-6 text-center text-lg font-medium tracking-wide text-snow/90">Live in minutes, not weeks.</p>
         <div className={glassCardClass}>
           {result ? <KeyReveal result={result} /> : <SignupForm onCreated={setResult} />}
         </div>
@@ -147,7 +147,7 @@ function KeyReveal({ result }: { result: RegisterPartnerResult }) {
           <span className="text-sm font-medium text-ink-700">Secret key</span>
           <CopyButton text={result.apiKey} label="Copy key" onCopied={() => setStored(true)} />
         </div>
-        <code data-testid="api-key" className="mt-2 block break-all rounded-lg bg-ink-900 p-3 font-mono text-sm text-brand-200">
+        <code data-testid="api-key" className="mt-2 block break-all rounded-lg bg-night p-3 font-mono text-sm text-[#b2bbef]">
           {result.apiKey}
         </code>
         <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">

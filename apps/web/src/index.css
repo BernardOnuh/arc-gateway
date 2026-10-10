@@ -2,18 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Palette as RGB triplets; .dark swaps surfaces and text. */
+:root {
+  --white: 255 255 255;
+  --ink-950: 18 20 43;
+  --ink-900: 28 31 63;
+  --ink-800: 38 42 82;
+  --ink-700: 58 63 107;
+  --ink-600: 85 91 136;
+  --ink-400: 138 143 179;
+  --ink-300: 180 184 212;
+  --mist-50: 247 248 253;
+  --mist-100: 238 240 250;
+  --mist-200: 227 230 246;
+  --mist-300: 213 217 240;
+  --brand-50: 243 244 253;
+  --brand-100: 230 233 251;
+  --brand-200: 208 214 246;
+  --brand-300: 178 187 239;
+  --brand-400: 141 153 228;
+  --brand-500: 107 120 214;
+  --brand-600: 84 97 196;
+  --brand-700: 68 80 166;
+  --brand-800: 54 63 130;
+  --brand-900: 39 45 92;
+  --card-sheen: linear-gradient(135deg, #c7cff6 0%, #dfe3fb 55%, #eef0fd 100%);
+  --sky-tint: 61 95 174;
+  color-scheme: light;
+}
+
+.dark {
+  --white: 21 26 54;
+  --ink-950: 247 248 255;
+  --ink-900: 238 240 255;
+  --ink-800: 223 227 251;
+  --ink-700: 195 200 234;
+  --ink-600: 154 161 204;
+  --ink-400: 108 115 159;
+  --ink-300: 75 82 126;
+  --mist-50: 16 20 44;
+  --mist-100: 11 15 36;
+  --mist-200: 8 11 28;
+  --mist-300: 31 37 71;
+  --brand-50: 22 27 58;
+  --brand-100: 30 37 80;
+  --brand-200: 42 51 104;
+  --brand-300: 59 70 136;
+  --brand-400: 86 100 184;
+  --brand-500: 115 128 221;
+  --brand-600: 143 155 232;
+  --brand-700: 170 180 240;
+  --brand-800: 200 206 246;
+  --brand-900: 225 229 251;
+  --card-sheen: linear-gradient(135deg, #2b346c 0%, #1f2652 55%, #181d40 100%);
+  --sky-tint: 10 14 40;
+  color-scheme: dark;
+}
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
   body {
-    @apply bg-mist-100 font-sans text-ink-900;
+    @apply bg-mist-100 font-sans text-ink-900 transition-colors duration-500;
   }
   h1,
   h2,
   h3 {
-    @apply font-display font-bold tracking-[-0.03em];
+    @apply font-display font-semibold tracking-[-0.035em];
   }
   ::selection {
     @apply bg-brand-200 text-ink-900;
@@ -21,28 +78,35 @@
 }
 
 @layer components {
-  /* Navy pill: the main action on light backgrounds. */
+  /* Navy pill (inverts in dark mode): the main action on page surfaces. */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink-900 px-6 py-3 font-semibold text-white transition hover:bg-ink-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-200 disabled:opacity-60;
   }
-  /* Lavender pill: the main action on the sky. */
+  /* Frosted pill: the main action on the sky (day and night). */
   .btn-glass {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-100/90 px-6 py-3 font-semibold text-ink-900 shadow-soft ring-1 ring-white/70 backdrop-blur transition hover:bg-white;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-snow/85 px-6 py-3 font-semibold text-night shadow-soft ring-1 ring-snow/70 backdrop-blur transition hover:bg-snow;
   }
   .btn-outline-light {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/50 px-6 py-3 font-semibold text-white transition hover:bg-white/10;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-snow/50 px-6 py-3 font-semibold text-snow transition hover:bg-snow/10;
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink-900/10 bg-white px-6 py-3 font-semibold text-ink-900 transition hover:border-ink-900/20;
   }
   .glass {
-    @apply bg-white/30 shadow-float ring-1 ring-white/50 backdrop-blur-xl;
+    @apply bg-snow/30 shadow-float ring-1 ring-snow/50 backdrop-blur-xl dark:bg-snow/[0.06] dark:ring-snow/15;
   }
   .eyebrow {
-    @apply inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-white ring-1 ring-white/30 backdrop-blur;
+    @apply inline-flex items-center gap-2 rounded-full bg-snow/15 px-3.5 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-snow ring-1 ring-snow/30 backdrop-blur;
   }
   .card {
     @apply rounded-3xl bg-white shadow-soft ring-1 ring-ink-900/5;
+  }
+  /* Scroll reveal (see components/motion.tsx). */
+  .reveal {
+    @apply translate-y-6 opacity-0 transition duration-700 ease-out;
+  }
+  .reveal.is-visible {
+    @apply translate-y-0 opacity-100;
   }
 }
 
@@ -53,4 +117,29 @@
     animation: none !important;
     transition: none !important;
   }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
 }
+
+/* Night versions of the status tints (Tailwind's red/amber/green/blue scales are fixed colors). */
+.dark .bg-red-50 { background-color: rgb(127 29 29 / 0.28); }
+.dark .bg-amber-50 { background-color: rgb(120 53 15 / 0.3); }
+.dark .bg-emerald-50,
+.dark .bg-green-50 { background-color: rgb(6 78 59 / 0.35); }
+.dark .bg-blue-50 { background-color: rgb(30 58 138 / 0.35); }
+.dark .text-red-600,
+.dark .text-red-700,
+.dark .text-red-800 { color: rgb(252 165 165); }
+.dark .text-amber-800,
+.dark .text-amber-900 { color: rgb(253 230 138); }
+.dark .text-emerald-700,
+.dark .text-green-700 { color: rgb(110 231 183); }
+.dark .text-blue-700 { color: rgb(147 197 253); }
+.dark .border-red-200,
+.dark .ring-red-200 { --tw-ring-color: rgb(248 113 113 / 0.35); border-color: rgb(248 113 113 / 0.35); }
+.dark .border-amber-300,
+.dark .ring-amber-200 { --tw-ring-color: rgb(251 191 36 / 0.35); border-color: rgb(251 191 36 / 0.35); }
+.dark .ring-emerald-200 { --tw-ring-color: rgb(52 211 153 / 0.3); }
+.dark .ring-blue-200 { --tw-ring-color: rgb(96 165 250 / 0.3); }

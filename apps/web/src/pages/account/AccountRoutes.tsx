@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { SkyBackdrop } from "../../components/art";
 import { Logo } from "../../components/Logo";
+import { ThemeToggle } from "../../components/ThemeToggle";
 import { CustomerAuthProvider, useCustomerAuth } from "../../lib/customerAuth";
 import { NotFound } from "../NotFound";
 import { Account } from "./Account";
@@ -15,8 +16,9 @@ function AccountShell({ children }: { children: ReactNode }) {
         <SkyBackdrop />
       </div>
       <div className="relative mx-auto max-w-lg px-4 py-10">
-        <div className="mb-8 flex justify-center">
+        <div className="mb-8 flex items-center justify-between">
           <Logo to="/account" tone="light" />
+          <ThemeToggle onSky />
         </div>
         {children}
       </div>

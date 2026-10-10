@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { Logo } from "../components/Logo";
+import { ThemeToggle } from "../components/ThemeToggle";
 
 const nav = [
   { to: "/how-it-works", label: "How it works" },
@@ -11,7 +12,7 @@ const nav = [
 export function MarketingLayout() {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="absolute inset-x-0 top-0 z-30 border-b border-white/20">
+      <header className="absolute inset-x-0 top-0 z-30 border-b border-snow/20">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
           <Logo tone="light" />
           <nav className="flex flex-wrap items-center gap-x-7 gap-y-2 text-[15px] font-medium tracking-wide">
@@ -20,15 +21,16 @@ export function MarketingLayout() {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  isActive ? "font-bold text-white" : "text-white/85 transition hover:text-white"
+                  isActive ? "font-bold text-snow" : "text-snow/85 transition hover:text-snow"
                 }
               >
                 {item.label}
               </NavLink>
             ))}
-            <Link to="/app/login" className="text-white/85 transition hover:text-white">
+            <Link to="/app/login" className="text-snow/85 transition hover:text-snow">
               Sign in
             </Link>
+            <ThemeToggle onSky />
             <Link to="/signup" className="btn-glass px-5 py-2 text-[15px]">
               Get your API key
             </Link>

@@ -34,7 +34,7 @@ export function Stat({ label, value, hint }: { label: string; value: ReactNode; 
   return (
     <div className="rounded-3xl bg-brand-100 p-5 first:bg-card-sheen">
       <p className="text-sm font-semibold text-ink-700">{label}</p>
-      <p className="mt-3 text-2xl font-extrabold tracking-[-0.03em]">{value}</p>
+      <p className="mt-3 text-2xl font-display font-semibold tracking-[-0.03em]">{value}</p>
       {hint && <p className="mt-1 text-xs text-ink-600">{hint}</p>}
     </div>
   );

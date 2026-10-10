@@ -1,52 +1,35 @@
 /** @type {import('tailwindcss').Config} */
+
+// Palette colors are CSS variables (src/index.css) so `.dark` on <html> can
+// swap the whole app at once. `snow` and `night` never change: snow is text
+// on the sky, night is code blocks and other always-dark surfaces.
+const v = (name) => `rgb(var(--${name}) / <alpha-value>)`;
+const scale = (name, steps) => Object.fromEntries(steps.map((s) => [s, v(`${name}-${s}`)]));
+
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        // Periwinkle primary.
-        brand: {
-          50: "#f3f4fd",
-          100: "#e6e9fb",
-          200: "#d0d6f6",
-          300: "#b2bbef",
-          400: "#8d99e4",
-          500: "#6b78d6",
-          600: "#5461c4",
-          700: "#4450a6",
-          800: "#363f82",
-          900: "#272d5c",
-        },
-        // Deep navy for text, primary buttons and the logo.
-        ink: {
-          950: "#12142b",
-          900: "#1c1f3f",
-          800: "#262a52",
-          700: "#3a3f6b",
-          600: "#555b88",
-          400: "#8a8fb3",
-          300: "#b4b8d4",
-        },
-        // Lavender page surfaces.
-        mist: {
-          50: "#f7f8fd",
-          100: "#eef0fa",
-          200: "#e3e6f6",
-          300: "#d5d9f0",
-        },
+        white: v("white"),
+        snow: "#ffffff",
+        night: "#161a3a",
+        brand: scale("brand", [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]),
+        ink: scale("ink", [950, 900, 800, 700, 600, 400, 300]),
+        mist: scale("mist", [50, 100, 200, 300]),
       },
       fontFamily: {
-        sans: ["Manrope Variable", "Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
-        display: ["Manrope Variable", "Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["Inter Variable", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["Inter Tight Variable", "Inter Tight", "Inter Variable", "ui-sans-serif", "sans-serif"],
         mono: ["JetBrains Mono Variable", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       backgroundImage: {
-        sky: "linear-gradient(180deg, #3d5fae 0%, #5b7fc9 38%, #8eaae0 72%, #c3d3f1 100%)",
-        "card-sheen": "linear-gradient(135deg, #c7cff6 0%, #dfe3fb 55%, #eef0fd 100%)",
+        "card-sheen": "var(--card-sheen)",
       },
       boxShadow: {
-        soft: "0 1px 2px rgba(28,31,63,0.04), 0 12px 32px -16px rgba(28,31,63,0.18)",
-        float: "0 40px 80px -30px rgba(28,31,63,0.45)",
+        soft: "0 1px 2px rgba(18,20,43,0.05), 0 12px 32px -16px rgba(18,20,43,0.22)",
+        float: "0 40px 80px -30px rgba(18,20,43,0.5)",
       },
       borderRadius: {
         "4xl": "2rem",
@@ -54,11 +37,15 @@ export default {
       keyframes: {
         drift: { "0%": { transform: "translateX(0)" }, "100%": { transform: "translateX(-50%)" } },
         float: { "0%,100%": { transform: "translateY(0)" }, "50%": { transform: "translateY(-8px)" } },
+        twinkle: { "0%,100%": { opacity: "0.25" }, "50%": { opacity: "1" } },
+        rise: { "0%": { opacity: "0", transform: "translateY(18px)" }, "100%": { opacity: "1", transform: "none" } },
       },
       animation: {
-        drift: "drift 140s linear infinite",
-        "drift-slow": "drift 220s linear infinite",
+        drift: "drift 70s linear infinite",
+        "drift-slow": "drift 120s linear infinite",
         float: "float 7s ease-in-out infinite",
+        twinkle: "twinkle 3.2s ease-in-out infinite",
+        rise: "rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both",
       },
     },
   },

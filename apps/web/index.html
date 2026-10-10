@@ -9,6 +9,15 @@
     <title>ARC Gateway</title>
   </head>
   <body>
+    <script>
+      // Pick day or night before first paint (no flash). Mirrors src/lib/theme.tsx.
+      try {
+        var pref = localStorage.getItem("arc-gateway.theme");
+        var h = new Date().getHours();
+        var dark = pref === "dark" || (pref !== "light" && (h >= 19 || h < 6));
+        if (dark) document.documentElement.classList.add("dark");
+      } catch (e) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

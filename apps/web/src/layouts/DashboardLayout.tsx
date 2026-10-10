@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { GatewayError } from "@arc/gateway-sdk";
 import { Logo } from "../components/Logo";
+import { ThemeToggle } from "../components/ThemeToggle";
 import {
   IconBook,
   IconChart,
@@ -91,6 +92,8 @@ export function DashboardLayout() {
               " "
             )}
           </span>
+          <span className="flex items-center gap-2">
+          <ThemeToggle />
           <button
             type="button"
             onClick={logout}
@@ -99,6 +102,7 @@ export function DashboardLayout() {
             <IconLogout size={16} />
             Log out
           </button>
+          </span>
         </header>
         <main className="flex-1 bg-white px-4 py-8 md:rounded-[32px] md:px-10 md:py-10">
           <div className="mx-auto max-w-6xl">

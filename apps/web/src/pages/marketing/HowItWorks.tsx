@@ -47,7 +47,7 @@ export function HowItWorks() {
                 <IconTile>{step.icon}</IconTile>
                 <span className="font-mono text-xs text-ink-400">step {i + 1}</span>
               </div>
-              <p className="mt-4 text-lg font-bold tracking-[-0.02em]">{step.name}</p>
+              <p className="mt-4 font-display text-lg font-semibold tracking-[-0.02em]">{step.name}</p>
               <p className="mt-1 text-sm text-ink-600">{step.detail}</p>
             </li>
           ))}

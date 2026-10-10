@@ -4,7 +4,8 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { Providers } from "./Providers";
 import { routerFuture } from "./lib/router";
-import "@fontsource-variable/manrope";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/inter-tight";
 import "@fontsource-variable/jetbrains-mono";
 import "./index.css";
 

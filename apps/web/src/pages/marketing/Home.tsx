@@ -14,6 +14,7 @@ import {
   ProductPreview,
   SkyBackdrop,
 } from "../../components/art";
+import { Reveal, useScrollProgress } from "../../components/motion";
 import { DEFAULT_FEE_BPS, formatBps } from "../../lib/format";
 
 const steps = [
@@ -55,7 +56,7 @@ function StartForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="mx-auto mt-9 flex max-w-lg items-center gap-2 rounded-full bg-white/15 p-1.5 pl-6 ring-1 ring-white/50 backdrop-blur-md"
+      className="mx-auto mt-9 flex max-w-lg items-center gap-2 rounded-full bg-snow/15 p-1.5 pl-6 ring-1 ring-snow/50 backdrop-blur-md"
     >
       <label htmlFor="hero-business" className="sr-only">
         Business name
@@ -65,7 +66,7 @@ function StartForm() {
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Your business name"
-        className="min-w-0 flex-1 bg-transparent text-white placeholder:text-white/75 focus:outline-none"
+        className="min-w-0 flex-1 bg-transparent text-snow placeholder:text-snow/75 focus:outline-none"
       />
       <button type="submit" className="btn-glass shrink-0 px-5 py-2.5">
         Start free
@@ -75,35 +76,50 @@ function StartForm() {
 }
 
 export function Home() {
+  // Hero preview starts slanted back and swings flat as you scroll down.
+  const heroPreview = useScrollProgress<HTMLDivElement>(0.95, 0.3);
+  // The second preview turns toward you as it scrolls into view.
+  const sidePreview = useScrollProgress<HTMLDivElement>(1, 0.35);
   return (
     <>
       <section className="relative overflow-hidden">
         <SkyBackdrop />
-        <div className="relative mx-auto max-w-6xl px-4 pt-36 text-center text-white sm:pt-44">
-          <h1 className="mx-auto max-w-5xl text-[2.9rem] leading-[1.02] sm:text-[4.6rem]">
+        <div className="relative mx-auto max-w-6xl px-4 pt-36 text-center text-snow sm:pt-44">
+          <h1 className="mx-auto max-w-5xl animate-rise text-[2.9rem] leading-[1.02] sm:text-[4.6rem]">
             Drop-in cross-chain gateway to ARC for your business
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed tracking-wide text-white/90">
+          <p className="mx-auto mt-6 max-w-xl animate-rise text-lg leading-relaxed text-snow/90 [animation-delay:120ms]">
             Accept assets from Ethereum, Base and BNB Chain, settle on ARC, and earn a fee on every transaction.
           </p>
-          <StartForm />
-          <p className="mt-4 text-sm text-white/80">
+          <div className="animate-rise [animation-delay:220ms]">
+            <StartForm />
+          </div>
+          <p className="mt-4 animate-rise text-sm text-snow/80 [animation-delay:300ms]">
             Or{" "}
-            <Link to="/developers" className="font-semibold text-white underline-offset-4 hover:underline">
+            <Link to="/developers" className="font-semibold text-snow underline-offset-4 hover:underline">
               read the docs
             </Link>{" "}
             · {formatBps(DEFAULT_FEE_BPS)} per transaction · no monthly minimum
           </p>
-          <div className="glass mx-auto mt-14 max-w-5xl rounded-t-[34px] border-b-0 p-2 pb-0 sm:mt-16 sm:p-3 sm:pb-0">
-            <ProductPreview className="rounded-b-none text-left" />
+          <div className="mt-14 animate-rise [animation-delay:380ms] sm:mt-16">
+            <div
+              ref={heroPreview}
+              className="glass mx-auto max-w-5xl origin-top rounded-t-[34px] p-2 pb-0 will-change-transform sm:p-3 sm:pb-0"
+              style={{
+                transform:
+                  "perspective(1600px) rotateX(calc((1 - var(--p, 0)) * 32deg)) scale(calc(0.88 + var(--p, 0) * 0.12)) translateY(calc((1 - var(--p, 0)) * 24px))",
+              }}
+            >
+              <ProductPreview className="rounded-b-none text-left" />
+            </div>
           </div>
         </div>
       </section>
 
       <section className="overflow-hidden">
         <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 py-20 sm:py-28 lg:grid-cols-[0.9fr_1.1fr]">
-          <div>
-            <p className="mb-3 text-sm font-bold uppercase tracking-[0.14em] text-brand-600">Three steps</p>
+          <Reveal>
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.16em] text-brand-600">Three steps</p>
             <h2 className="text-4xl leading-[1.08] sm:text-5xl">How it works</h2>
             <hr className="my-6 border-ink-900/10" />
             <p className="text-lg leading-relaxed tracking-wide text-ink-600">
@@ -123,9 +139,17 @@ export function Home() {
             <Link to="/how-it-works" className="btn-secondary mt-9">
               See the full flow <IconArrowRight size={18} />
             </Link>
-          </div>
+          </Reveal>
           <div className="relative -mr-4 sm:-mr-40 lg:-mr-72">
-            <div className="origin-left [transform:perspective(2200px)_rotateY(-16deg)_rotateX(5deg)_rotateZ(1deg)]">
+            <div
+              ref={sidePreview}
+              className="origin-left will-change-transform"
+              style={{
+                transform:
+                  "perspective(2200px) rotateY(calc(-34deg + var(--p, 0) * 20deg)) rotateX(calc(9deg - var(--p, 0) * 4deg)) rotateZ(1deg) translateX(calc((1 - var(--p, 0)) * 90px))",
+                opacity: "calc(0.35 + var(--p, 0) * 0.65)",
+              }}
+            >
               <ProductPreview className="shadow-float" />
             </div>
           </div>
@@ -136,13 +160,13 @@ export function Home() {
         <Section eyebrow="Pricing" title="Simple fee model">
           <div className="grid gap-6 lg:grid-cols-[1fr_1fr_1.2fr]">
             <div className="rounded-3xl bg-card-sheen p-8">
-              <p className="text-6xl font-extrabold tracking-[-0.04em]">{formatBps(DEFAULT_FEE_BPS)}</p>
+              <p className="font-display text-6xl font-semibold tracking-[-0.045em]">{formatBps(DEFAULT_FEE_BPS)}</p>
               <p className="mt-4 leading-relaxed text-ink-700">
                 per transaction, taken from the amount sent. Every quote shows the fee before your customer commits.
               </p>
             </div>
             <div className="rounded-3xl bg-mist-100 p-8">
-              <p className="text-6xl font-extrabold tracking-[-0.04em]">$0</p>
+              <p className="font-display text-6xl font-semibold tracking-[-0.045em]">$0</p>
               <p className="mt-4 leading-relaxed text-ink-700">
                 to sign up. No monthly minimum. Revenue per customer is in your dashboard.
               </p>

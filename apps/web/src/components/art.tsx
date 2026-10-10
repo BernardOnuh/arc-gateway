@@ -1,4 +1,5 @@
 import { useId, type ReactNode, type SVGProps } from "react";
+import { useTheme } from "../lib/theme";
 
 /**
  * Hand-built SVG artwork, icons and the product preview. Everything is inline so it themes with
@@ -147,18 +148,16 @@ export function IconTile({ children, tone = "light" }: { children: ReactNode; to
   );
 }
 
-/** The ARC Gateway mark: a hexagon (the network) around an "A". */
+/** The ARC Gateway mark: a hexagon (the network) around an "A". Follows the theme. */
 export function LogoMark({ size = 30, tone = "dark" }: { size?: number; tone?: "dark" | "light" }) {
-  const fg = tone === "dark" ? "#1c1f3f" : "#ffffff";
-  const bg = tone === "dark" ? "#ffffff" : "#1c1f3f";
   return (
     <svg aria-hidden width={size} height={size} viewBox="0 0 32 32">
-      <rect width="32" height="32" rx="10" fill={fg} />
-      <path d="M16 6l8.7 5v10L16 26l-8.7-5V11z" fill="none" stroke="#b2bbef" strokeWidth="2.2" strokeLinejoin="round" />
+      <rect width="32" height="32" rx="10" className={tone === "dark" ? "fill-ink-900" : "fill-snow"} />
+      <path d="M16 6l8.7 5v10L16 26l-8.7-5V11z" fill="none" stroke="#8d99e4" strokeWidth="2.2" strokeLinejoin="round" />
       <path
         d="M11.5 20L16 10.5 20.5 20M13.1 16.8h5.8"
         fill="none"
-        stroke={bg}
+        className={tone === "dark" ? "stroke-white" : "stroke-night"}
         strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -167,77 +166,156 @@ export function LogoMark({ size = 30, tone = "dark" }: { size?: number; tone?: "
   );
 }
 
-/** One fluffy cloud: overlapping soft ellipses, blurred. */
-function Cloud({ x, y, scale = 1, opacity = 0.9, blur }: { x: number; y: number; scale?: number; opacity?: number; blur: string }) {
+/** One fluffy cloud: overlapping soft ellipses, blurred, bobbing gently. */
+function Cloud({
+  x,
+  y,
+  scale = 1,
+  opacity = 0.9,
+  blur,
+  fill,
+  bob,
+}: {
+  x: number;
+  y: number;
+  scale?: number;
+  opacity?: number;
+  blur: string;
+  fill: string;
+  bob: number;
+}) {
   return (
     <g transform={`translate(${x} ${y}) scale(${scale})`} opacity={opacity} filter={`url(#${blur})`}>
-      <ellipse cx="0" cy="0" rx="120" ry="34" fill="#fff" />
-      <ellipse cx="-60" cy="-14" rx="62" ry="38" fill="#fff" />
-      <ellipse cx="20" cy="-34" rx="74" ry="48" fill="#fff" />
-      <ellipse cx="92" cy="-12" rx="56" ry="34" fill="#fff" />
+      <g className="animate-float" style={{ animationDelay: `${bob}s`, animationDuration: `${8 + (bob % 4)}s` }}>
+        <ellipse cx="0" cy="0" rx="120" ry="34" fill={fill} />
+        <ellipse cx="-60" cy="-14" rx="62" ry="38" fill={fill} />
+        <ellipse cx="20" cy="-34" rx="74" ry="48" fill={fill} />
+        <ellipse cx="92" cy="-12" rx="56" ry="34" fill={fill} />
+      </g>
     </g>
   );
 }
 
-function CloudBank({ blur, variant }: { blur: string; variant: 0 | 1 }) {
-  const a = [
-    { x: 320, y: 130, scale: 1.1, opacity: 0.8 },
-    { x: 520, y: 270, scale: 0.7, opacity: 0.55 },
-    { x: 860, y: 80, scale: 0.9, opacity: 0.6 },
-    { x: 1250, y: 230, scale: 1.2, opacity: 0.75 },
-    { x: 1540, y: 110, scale: 1.3, opacity: 0.8 },
-    { x: 420, y: 540, scale: 1.5, opacity: 0.7 },
-    { x: 1080, y: 560, scale: 1.7, opacity: 0.75 },
-    { x: 1560, y: 640, scale: 1.2, opacity: 0.65 },
-    { x: 700, y: 420, scale: 0.8, opacity: 0.5 },
-  ];
-  const b = [
-    { x: 380, y: 360, scale: 1.8, opacity: 0.45 },
-    { x: 760, y: 220, scale: 2.0, opacity: 0.3 },
-    { x: 1420, y: 400, scale: 1.9, opacity: 0.45 },
-    { x: 1000, y: 760, scale: 2.4, opacity: 0.7 },
-    { x: 520, y: 800, scale: 2.2, opacity: 0.75 },
-    { x: 1500, y: 830, scale: 2.2, opacity: 0.7 },
-  ];
+// Few, well-spaced clouds, all clear of the tile edges (x 0 / 1920) so the loop has no seam.
+const frontClouds = [
+  { x: 360, y: 150, scale: 1.0, opacity: 0.85 },
+  { x: 1560, y: 170, scale: 1.0, opacity: 0.8 },
+  { x: 820, y: 720, scale: 1.4, opacity: 0.7 },
+  { x: 1580, y: 560, scale: 0.9, opacity: 0.6 },
+];
+const backClouds = [
+  { x: 560, y: 380, scale: 1.9, opacity: 0.35 },
+  { x: 1250, y: 520, scale: 1.4, opacity: 0.3 },
+  { x: 300, y: 820, scale: 2.2, opacity: 0.6 },
+  { x: 1300, y: 840, scale: 2.4, opacity: 0.55 },
+];
+
+/** Deterministic star field (same sky every visit). */
+const stars = Array.from({ length: 110 }, (_, i) => {
+  const r = (n: number) => {
+    const x = Math.sin(i * 12.9898 + n * 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  return { x: r(1) * 1920, y: r(2) * 720, size: r(3) < 0.85 ? 0.9 + r(4) : 1.8 + r(4), delay: r(5) * 4 };
+});
+
+function Stars() {
   return (
-    <>
-      {(variant === 0 ? a : b).map((c, i) => (
-        <Cloud key={i} {...c} blur={blur} />
+    <svg viewBox="0 0 1920 900" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full">
+      {stars.map((st, i) => (
+        <circle
+          key={i}
+          cx={st.x}
+          cy={st.y}
+          r={st.size}
+          fill="#fff"
+          className="animate-twinkle"
+          style={{ animationDelay: `${st.delay}s`, animationDuration: `${2.6 + (i % 5) * 0.6}s` }}
+        />
       ))}
-    </>
+    </svg>
   );
 }
 
+function Moon() {
+  return (
+    <svg viewBox="0 0 120 120" className="absolute right-[8%] top-[max(1rem,9%)] h-20 w-20 sm:h-28 sm:w-28">
+      <defs>
+        <radialGradient id="moon-glow">
+          <stop offset="0.45" stopColor="#dfe6ff" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#dfe6ff" stopOpacity="0" />
+        </radialGradient>
+        <mask id="moon-cut">
+          <rect width="120" height="120" fill="#fff" />
+          <circle cx="74" cy="48" r="26" fill="#000" />
+        </mask>
+      </defs>
+      <circle cx="60" cy="60" r="58" fill="url(#moon-glow)" />
+      <circle cx="60" cy="60" r="28" fill="#f4f6ff" mask="url(#moon-cut)" />
+    </svg>
+  );
+}
+
+const DAY_SKY = "linear-gradient(180deg, #3d5fae 0%, #5b7fc9 38%, #8eaae0 72%, #c3d3f1 100%)";
+const NIGHT_SKY = "linear-gradient(180deg, #060918 0%, #0d1433 40%, #1a2558 78%, #26346c 100%)";
+
 /**
- * Painted-sky backdrop: a blue gradient with two layers of vector clouds
- * drifting at different speeds. Each layer is two unscaled 1920px tiles side
- * by side (clouds kept clear of the tile edges), so the loop is seamless at
- * any viewport size.
+ * Painted sky behind heroes. Day: blue gradient with a few drifting clouds.
+ * Night (dark theme): deep navy, twinkling stars, a crescent moon and faint
+ * clouds. Each cloud layer is two unscaled 1920px tiles side by side, so the
+ * loop is seamless at any viewport size.
  */
 export function SkyBackdrop({ className = "" }: { className?: string }) {
+  const { theme } = useTheme();
+  const night = theme === "dark";
   const id = useId().replace(/:/g, "");
-  const layer = (variant: 0 | 1, blur: string, anim: string) => (
+  const fill = night ? "#aeb9e6" : "#ffffff";
+  const layer = (clouds: typeof frontClouds, blur: number, anim: string, key: string, dim: number) => (
     <div className={`absolute left-0 top-0 flex h-[900px] w-[3840px] ${anim}`}>
       {[0, 1].map((k) => (
-        <svg key={k} width="1920" height="900" viewBox="0 0 1920 900" className="shrink-0">
+        <svg key={k} width="1920" height="900" viewBox="0 0 1920 900" overflow="visible" className="shrink-0">
           <defs>
-            <filter id={`${blur}${k}`} x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation={variant === 0 ? 7 : 18} />
+            <filter id={`${id}${key}${k}`} x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation={blur} />
             </filter>
           </defs>
-          <CloudBank blur={`${blur}${k}`} variant={variant} />
+          {clouds.map((c, i) => (
+            <Cloud key={i} {...c} opacity={c.opacity * dim} blur={`${id}${key}${k}`} fill={fill} bob={i * 1.7} />
+          ))}
         </svg>
       ))}
     </div>
   );
   return (
-    <div aria-hidden className={`pointer-events-none absolute inset-0 overflow-hidden bg-sky ${className}`}>
-      {layer(1, `${id}b`, "animate-drift-slow")}
-      {layer(0, `${id}a`, "animate-drift")}
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white/25" />
+    <div
+      aria-hidden
+      className={`pointer-events-none absolute inset-0 overflow-hidden transition-[background] duration-700 ${className}`}
+      style={{ background: night ? NIGHT_SKY : DAY_SKY }}
+    >
+      {night && (
+        <>
+          <Stars />
+          <Moon />
+        </>
+      )}
+      {layer(backClouds, night ? 22 : 18, "animate-drift-slow", "b", night ? 0.22 : 1)}
+      {layer(frontClouds, night ? 10 : 6, "animate-drift", "f", night ? 0.25 : 1)}
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-snow/20 dark:to-transparent" />
     </div>
   );
 }
+
+export const IconSun = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" />
+  </Icon>
+);
+export const IconMoon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />
+  </Icon>
+);
 
 /** Small illustration for empty tables and lists. */
 export function EmptyArt({ className = "" }: { className?: string }) {

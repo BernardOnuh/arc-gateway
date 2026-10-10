@@ -44,12 +44,12 @@ export function Overview() {
         }
       />
 
-      <div className="relative mb-6 overflow-hidden rounded-3xl px-6 py-9 text-white sm:px-9">
+      <div className="relative mb-6 overflow-hidden rounded-3xl px-6 py-9 text-snow sm:px-9">
         <SkyBackdrop />
-        <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-[#3d5fae]/80 via-[#3d5fae]/30 to-transparent" />
+        <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-[rgb(var(--sky-tint)/0.8)] via-[rgb(var(--sky-tint)/0.3)] to-transparent" />
         <div className="relative">
-          <p className="text-sm font-medium text-white/85">Welcome back{profile.data ? `, ${profile.data.name}` : ""}</p>
-          <p className="mt-1 max-w-lg text-2xl font-bold tracking-[-0.03em]">
+          <p className="text-sm font-medium text-snow/85">Welcome back{profile.data ? `, ${profile.data.name}` : ""}</p>
+          <p className="mt-1 max-w-lg text-2xl font-display font-semibold tracking-[-0.03em]">
             Every quote, intent and fee your customers generate, routed to ARC.
           </p>
         </div>

@@ -64,9 +64,9 @@ export function Login() {
             Your key is swapped for a secure session cookie and isn't saved in this browser. Log out on shared computers.
           </p>
         </form>
-        <p className="mt-6 text-center text-sm text-white/90">
+        <p className="mt-6 text-center text-sm text-snow/90">
           No key yet?{" "}
-          <Link to="/signup" className="font-bold text-white underline-offset-4 hover:underline">
+          <Link to="/signup" className="font-bold text-snow underline-offset-4 hover:underline">
             Get your API key
           </Link>
         </p>
