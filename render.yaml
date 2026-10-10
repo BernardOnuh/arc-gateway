@@ -62,11 +62,11 @@ services:
     name: arc-gateway-web
     runtime: static
     # Render provides pnpm (from packageManager); `corepack enable` fails there (read-only /usr/bin).
+    # "@arc/web..." builds the web app and its workspace deps (SDK, widget) in
+    # dependency order, so renaming a package can't silently skip its build.
     buildCommand: >-
       pnpm install --frozen-lockfile &&
-      pnpm --filter stableflowr-sdk build &&
-      pnpm --filter stableflowr-widget build &&
-      pnpm --filter @arc/web build &&
+      pnpm --filter "@arc/web..." build &&
       cp -r packages/arc-widget/dist/standalone apps/web/dist/widget
     staticPublishPath: ./apps/web/dist
     # docs.* serves the same build; the app shows only the docs on that host.
