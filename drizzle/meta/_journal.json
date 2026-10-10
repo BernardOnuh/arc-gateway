@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791300681673,
+      "tag": "0000_noisy_switch",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791344046550,
+      "tag": "0001_tearful_bloodstrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791394500992,
+      "tag": "0002_thin_anita_blake",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791478370980,
+      "tag": "0003_new_omega_flight",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791478994273,
+      "tag": "0004_rapid_thor",
+      "breakpoints": true
+    }
+  ]
+}

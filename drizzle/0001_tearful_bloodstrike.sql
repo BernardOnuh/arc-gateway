@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "intents_quote_id_unique" ON "intents" USING btree ("quote_id");
