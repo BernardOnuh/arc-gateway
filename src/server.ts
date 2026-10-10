@@ -18,6 +18,7 @@ import { customerRoutes } from "./routes/customers.js";
 import { customerAccountRoutes } from "./routes/customerAccounts.js";
 import { ledgerRoutes } from "./routes/ledger.js";
 import { quoteRoutes } from "./routes/quotes.js";
+import { paymentRoutes } from "./routes/payments.js";
 import { intentRoutes } from "./routes/intents.js";
 
 export type App = Awaited<ReturnType<typeof buildApp>>;
@@ -35,6 +36,10 @@ export function isWidgetRoute(method: string, url: string): boolean {
   const path = url.split("?")[0];
   if (method === "GET" && (path === "/v1/chains" || path === "/v1/tokens")) return true;
   if (method === "POST" && path === "/v1/quotes") return true;
+  if (method === "GET" && path === "/v1/prices") return true;
+  // Checkout: read a payment, quote legs, report leg transactions.
+  if (method === "GET" && /^\/v1\/payments\/[^/]+$/.test(path)) return true;
+  if (method === "POST" && /^\/v1\/payments\/[^/]+\/legs(\/[^/]+\/submitted)?$/.test(path)) return true;
   return method === "GET" && /^\/v1\/intents\/[^/]+$/.test(path);
 }
 
@@ -101,6 +106,7 @@ export async function buildApp() {
         { name: "customer-accounts", description: "End-customer self-service: password, sessions, payout wallet" },
         { name: "quotes", description: "Chain/token discovery and fee-adjusted swap quotes" },
         { name: "intents", description: "Intent submission and status polling" },
+        { name: "payments", description: "Checkout: a USD price paid with any mix of tokens, settled in USDC on ARC" },
         { name: "ledger", description: "Partner revenue and per-customer transaction breakdown" },
       ],
     },
@@ -143,6 +149,7 @@ export async function buildApp() {
   await customerAccountRoutes(app);
   await ledgerRoutes(app);
   await quoteRoutes(app);
+  await paymentRoutes(app);
   await intentRoutes(app);
 
   return app;

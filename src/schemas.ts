@@ -289,6 +289,7 @@ export const partnerProfileResponseSchema = z.object({
   name: z.string(),
   email: z.string().nullable(),
   hasPassword: z.boolean().describe("Whether email + password sign-in is set up."),
+  payoutAddress: z.string().nullable().describe("ARC address that receives checkout payments."),
   feeBps: z.number().int().describe("Fee charged on quotes made with this key, in basis points."),
   rateLimitPerMin: z.number().int().describe("Authenticated requests allowed per minute for this key."),
   createdAt: z.string(),

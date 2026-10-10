@@ -131,6 +131,7 @@ export async function partnerRoutes(app: FastifyInstance) {
         name: partner.name,
         email: partner.email,
         hasPassword: partner.passwordHash !== null,
+        payoutAddress: partner.payoutAddress,
         feeBps: key.feeBps,
         rateLimitPerMin: key.rateLimitPerMin,
         createdAt: partner.createdAt.toISOString(),

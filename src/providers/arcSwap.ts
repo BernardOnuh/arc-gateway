@@ -34,6 +34,11 @@ export const APP_KIT_CHAINS: Record<number, string> = {
 /** Swap stables supported on the origin side (Arc itself only settles USDC/EURC/cirBTC). */
 const STABLE_ALIASES = new Set(["USDC", "USDT", "EURC"]);
 
+/** Whether Circle Swap can route this source token at all: a supported chain, and native gas or a stablecoin. */
+export function canRouteFrom(chainId: number, token: { symbol: string; isNative: boolean }): boolean {
+  return Boolean(APP_KIT_CHAINS[chainId]) && (token.isNative || STABLE_ALIASES.has(token.symbol.toUpperCase()));
+}
+
 /** Minimum estimateSwap param shape used by this provider (subset of SwapParams). */
 export interface EstimateSwapParams {
   from: { adapter: unknown; chain: string };

@@ -2,7 +2,9 @@ import { GatewayError } from "./errors.js";
 import type {
   ApiKeySummary,
   ChainInfo,
+  CreatePaymentParams,
   CreatePublishableKeyParams,
+  Payment,
   CreateCustomerParams,
   Customer,
   DashboardCredentials,
@@ -149,6 +151,24 @@ export class GatewayClient {
 
   revokeApiKey(keyId: string, apiKey?: string): Promise<ApiKeySummary> {
     return this.request("POST", "/v1/partners/me/api-keys/revoke", { body: { keyId }, apiKey });
+  }
+
+  /** Sets the ARC address that receives checkout payments. */
+  setPayoutAddress(payoutAddress: string, apiKey?: string): Promise<{ payoutAddress: string }> {
+    return this.request("POST", "/v1/partners/me/payout", { body: { payoutAddress }, apiKey });
+  }
+
+  /** Creates a checkout for a USD amount; hand paymentId to the checkout widget. */
+  createPayment(params: CreatePaymentParams, apiKey?: string): Promise<Payment> {
+    return this.request("POST", "/v1/payments", { body: params, apiKey });
+  }
+
+  getPayment(paymentId: string, apiKey?: string): Promise<Payment> {
+    return this.request("GET", `/v1/payments/${encodeURIComponent(paymentId)}`, { apiKey });
+  }
+
+  listPayments(params: PageParams = {}, apiKey?: string): Promise<Page<Payment>> {
+    return this.request("GET", "/v1/payments", { query: { ...params }, apiKey });
   }
 
   /** One-time token for the customer to set their password (no email is sent). */

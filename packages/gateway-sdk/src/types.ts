@@ -236,6 +236,8 @@ export interface PartnerProfile {
   email: string | null;
   /** Whether email + password sign-in is set up. */
   hasPassword: boolean;
+  /** ARC address that receives checkout payments. */
+  payoutAddress: string | null;
   feeBps: number;
   rateLimitPerMin: number;
   createdAt: string;
@@ -272,4 +274,54 @@ export interface CreatePublishableKeyParams {
 export interface DashboardSession {
   /** ISO 8601 time the session cookie expires. */
   expiresAt: string;
+}
+
+export type PaymentStatus = "open" | "processing" | "paid" | "partially_paid" | "expired" | "canceled";
+
+export interface CreatePaymentParams {
+  /** USD price, up to 2 decimals, e.g. "10" or "10.50". */
+  amount: string;
+  description?: string;
+  /** Your order id. */
+  reference?: string;
+  customerId?: string;
+  /** Default 30. */
+  expiresInMinutes?: number;
+}
+
+export interface PaymentLeg {
+  legId: string;
+  quoteId: string;
+  originChainId: number;
+  token: { symbol: string; address: string; decimals: number; isNative: boolean };
+  amountIn: string;
+  estimatedOut: string | null;
+  minOut: string | null;
+  /** What this leg is guaranteed to cover, in cents. */
+  valueCents: number;
+  payer: string;
+  expiresAt: number;
+  status: IntentStatus | "QUOTED";
+  originTx: string | null;
+  destTx: string | null;
+}
+
+export interface Payment {
+  paymentId: string;
+  merchantName: string;
+  amountCents: number;
+  currency: string;
+  description: string | null;
+  reference: string | null;
+  customerId: string | null;
+  status: PaymentStatus;
+  paidCents: number;
+  pendingCents: number;
+  remainingCents: number;
+  destChainId: number;
+  payoutAddress: string;
+  expiresAt: string;
+  paidAt: string | null;
+  createdAt: string;
+  legs: PaymentLeg[];
 }

@@ -3,6 +3,7 @@ import type { UpstreamQuote, QuoteProvider, QuoteRequest, IntentStatusDetail } f
 import { IntentStatus } from "./types.js";
 import { getChain } from "../chains.js";
 import { resolveToken } from "../tokens.js";
+import { referencePriceUsd } from "../pricing.js";
 
 interface Tracked {
   status: IntentStatus;
@@ -10,11 +11,22 @@ interface Tracked {
   destTx: string | null;
 }
 
-function estimateOut(amountIn: bigint, originChainId: number, destChainId: number): bigint {
+function estimateOut(req: QuoteRequest): bigint {
   // Simulated market quality: same-chain routes keep more, cross-chain
-  // routes pay a simulated bridge/market spread.
-  const spreadBps = originChainId === destChainId ? 9800n : 9300n; // 2% / 7%
-  return (amountIn * spreadBps) / 10000n;
+  // routes pay a simulated bridge/market spread (0.5%).
+  const spreadBps = req.originChainId === req.destChainId ? 9990n : 9950n;
+  const tIn = resolveToken(req.originChainId, req.tokenIn);
+  const tOut = resolveToken(req.destChainId, req.tokenOut);
+  const pIn = tIn ? referencePriceUsd(tIn.symbol) : null;
+  const pOut = tOut ? referencePriceUsd(tOut.symbol) : null;
+  const amountIn = BigInt(req.amountIn);
+  if (!tIn || !tOut || !pIn || !pOut) return (amountIn * spreadBps) / 10000n;
+  // Price ratio as a fixed-point fraction (1e12) so tiny-priced tokens survive, then rescale decimals.
+  const ratio = BigInt(Math.round((pIn / pOut) * 1e12));
+  let out = (amountIn * ratio * spreadBps) / (10000n * 10n ** 12n);
+  const shift = tOut.decimals - tIn.decimals;
+  out = shift >= 0 ? out * 10n ** BigInt(shift) : out / 10n ** BigInt(-shift);
+  return out;
 }
 
 function randomTxHash(): string {
@@ -30,8 +42,7 @@ class MockProvider implements QuoteProvider {
   private tracked = new Map<string, Tracked>();
 
   async getQuote(req: QuoteRequest): Promise<UpstreamQuote> {
-    const amountIn = BigInt(req.amountIn);
-    const estimatedOut = estimateOut(amountIn, req.originChainId, req.destChainId);
+    const estimatedOut = estimateOut(req);
     const minOut = (estimatedOut * BigInt(10000 - req.slippageBps)) / 10000n;
 
     const id = randomId("mock");

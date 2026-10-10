@@ -6,6 +6,7 @@ import { db } from "../db/index.js";
 import { quotes, intents } from "../db/schema.js";
 import type { UpstreamQuote } from "../providers/types.js";
 import { quoteProvider } from "../providers/index.js";
+import { refreshIntent } from "../intentStatus.js";
 import {
   submitBodySchema,
   submitResponseSchema,
@@ -148,39 +149,13 @@ export async function intentRoutes(app: FastifyInstance) {
       }
       const row = intent[0];
 
-      let status = row.status;
-      let originTx = row.originTx;
-      let destTx = row.destTx;
-      if (row.upstreamId) {
-        // Load the originating quote so the provider can reconstruct chain/token
-        // context for status polling (arc-appkit needs chainIn/chainOut).
-        const [quote] = await db
-          .select()
-          .from(quotes)
-          .where(eq(quotes.id, row.quoteId))
-          .limit(1);
-        const upstreamQuote = quote?.response as unknown as UpstreamQuote | undefined;
-        let detail;
-        try {
-          detail = await quoteProvider.getStatus(row.upstreamId, upstreamQuote);
-        } catch {
-          return reply.code(502).send({ error: "upstream status unavailable" });
-        }
-        const updates: Partial<typeof intents.$inferSelect> = {};
-        if (detail.status !== row.status) updates.status = detail.status;
-        if (detail.originTx && detail.originTx !== row.originTx) updates.originTx = detail.originTx;
-        if (detail.destTx && detail.destTx !== row.destTx) updates.destTx = detail.destTx;
-        if (Object.keys(updates).length > 0) {
-          const [updated] = await db
-            .update(intents)
-            .set({ ...updates, updatedAt: new Date() })
-            .where(eq(intents.id, row.id))
-            .returning({ status: intents.status, originTx: intents.originTx, destTx: intents.destTx });
-          status = updated.status;
-          originTx = updated.originTx;
-          destTx = updated.destTx;
-        }
+      let current = row;
+      try {
+        current = await refreshIntent(row);
+      } catch {
+        return reply.code(502).send({ error: "upstream status unavailable" });
       }
+      const { status, originTx, destTx } = current;
 
       return reply.send({
         id: row.id,
