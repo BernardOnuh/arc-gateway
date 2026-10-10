@@ -25,6 +25,7 @@ import { webhookRoutes } from "./routes/webhooks.js";
 import { passwordResetRoutes } from "./routes/passwordReset.js";
 import { sweepPayments } from "./routes/payments.js";
 import { deliverDue } from "./webhooks.js";
+import { cleanupExpired } from "./cleanup.js";
 import { intentRoutes } from "./routes/intents.js";
 
 export type App = Awaited<ReturnType<typeof buildApp>>;
@@ -211,6 +212,7 @@ function startWorkers(app: App) {
   };
   loop("webhook delivery", 5_000, () => deliverDue());
   loop("payment sweep", 15_000, () => sweepPayments());
+  loop("cleanup", 60 * 60_000, () => cleanupExpired());
 }
 
 if (!config.isTest) {
