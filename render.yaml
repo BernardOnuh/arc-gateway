@@ -17,6 +17,8 @@ services:
     dockerContext: .
     plan: free
     healthCheckPath: /health
+    domains:
+      - api.stableflowr.xyz
     envVars:
       - key: NODE_ENV
         value: production
@@ -40,14 +42,15 @@ services:
         value: "5042"
       - key: ARC_RPC_URL
         value: https://rpc.mainnet.arc.io
-      # app. and api. on onrender.com are different sites, so the cookie needs SameSite=None.
-      # With a custom domain (app.example.com + api.example.com), use lax.
+      # stableflowr.xyz and api.stableflowr.xyz are the same site, so lax works.
+      # (Only onrender.com hosts on both sides would need none.)
       - key: SESSION_COOKIE_SAMESITE
-        value: none
+        value: lax
       - key: APP_URL
-        sync: false
+        value: https://stableflowr.xyz
+      # The onrender.com host stays listed so the old address keeps working.
       - key: CORS_ORIGINS
-        sync: false
+        value: https://stableflowr.xyz,https://www.stableflowr.xyz,https://docs.stableflowr.xyz,https://arc-gateway-web.onrender.com
       - key: CIRCLE_API_KEY
         sync: false
       - key: RESEND_API_KEY
@@ -66,12 +69,21 @@ services:
       pnpm --filter @arc/web build &&
       cp -r packages/arc-widget/dist/standalone apps/web/dist/widget
     staticPublishPath: ./apps/web/dist
+    # docs.* serves the same build; the app shows only the docs on that host.
+    domains:
+      - stableflowr.xyz
+      - www.stableflowr.xyz
+      - docs.stableflowr.xyz
     envVars:
       # The API's PUBLIC https URL, baked into the site at build time. (fromService
       # `host` is the internal hostname, which browsers can't reach.) Change it if
       # Render suffixes the API's name or you add a custom domain, then redeploy.
       - key: VITE_GATEWAY_URL
-        value: https://arc-gateway-api.onrender.com
+        value: https://api.stableflowr.xyz
+      - key: VITE_SITE_URL
+        value: https://stableflowr.xyz
+      - key: VITE_DOCS_URL
+        value: https://docs.stableflowr.xyz
     routes:
       - type: rewrite
         source: /*

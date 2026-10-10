@@ -12,7 +12,7 @@ import { CodeBlock } from "../../components/CodeBlock";
 import { buttonClass, Card, ErrorState, inputClass, Loading, PageTitle, secondaryButtonClass } from "../../components/dashboard/ui";
 import { Segmented } from "../../components/forms";
 import { describeError } from "../../lib/gateway";
-import { GATEWAY_URL } from "../../lib/env";
+import { GATEWAY_URL, WIDGET_SCRIPT_URL } from "../../lib/env";
 import { logoToDataUrl } from "../../lib/logo";
 import { useApiKeys, useBranding, usePartnerProfile, useSaveBranding } from "../../lib/queries";
 
@@ -389,7 +389,7 @@ const reactSnippet = (pk: string) => `import { ArcCheckout } from "@arc/widget";
 />`;
 
 const scriptSnippet = (pk: string) => `<!-- Module build: wallet tooling loads only when the customer pays -->
-<script type="module" src="/arc-widget.js"></script>
+<script type="module" src="${WIDGET_SCRIPT_URL}"></script>
 
 <!-- Your saved branding (logo, colors, texts) applies automatically. -->
 <arc-checkout

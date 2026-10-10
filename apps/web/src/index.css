@@ -102,6 +102,20 @@
   .card {
     @apply rounded-3xl bg-white shadow-soft ring-1 ring-ink-900/5;
   }
+  /* Long-form docs text (pages/docs). */
+  .docs-prose > p,
+  .docs-prose > ul {
+    @apply my-4 text-[16px] leading-[1.75] text-ink-700;
+  }
+  .docs-prose > ul {
+    @apply list-disc space-y-2 pl-5 marker:text-ink-400;
+  }
+  .docs-prose > h3 {
+    @apply mb-2 mt-9 text-lg text-ink-900;
+  }
+  .docs-prose strong {
+    @apply font-semibold text-ink-900;
+  }
   /* Scroll reveal (see components/motion.tsx). */
   .reveal {
     @apply translate-y-6 opacity-0 transition duration-700 ease-out;

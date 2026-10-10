@@ -7,12 +7,24 @@ import { Developers } from "./pages/marketing/Developers";
 import { Pricing } from "./pages/marketing/Pricing";
 import { Signup } from "./pages/marketing/Signup";
 import { NotFound } from "./pages/NotFound";
+import { IS_DOCS_HOST } from "./lib/env";
 
 const DashboardRoutes = lazy(() => import("./pages/app/DashboardRoutes"));
 const Checkout = lazy(() => import("./pages/Checkout").then((m) => ({ default: m.Checkout })));
 const AccountRoutes = lazy(() => import("./pages/account/AccountRoutes"));
+const Docs = lazy(() => import("./pages/docs/Docs").then((m) => ({ default: m.Docs })));
+
+const loading = <div className="p-8 text-sm text-ink-600">Loading…</div>;
 
 export function App() {
+  // docs.example.com serves only the docs, at its root.
+  if (IS_DOCS_HOST) {
+    return (
+      <Suspense fallback={loading}>
+        <Docs />
+      </Suspense>
+    );
+  }
   return (
     <Routes>
       <Route element={<MarketingLayout />}>
@@ -23,6 +35,14 @@ export function App() {
         <Route path="signup" element={<Signup />} />
         <Route path="*" element={<NotFound />} />
       </Route>
+      <Route
+        path="docs/*"
+        element={
+          <Suspense fallback={loading}>
+            <Docs />
+          </Suspense>
+        }
+      />
       <Route
         path="app/*"
         element={

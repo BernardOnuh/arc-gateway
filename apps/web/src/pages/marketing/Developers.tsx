@@ -1,124 +1,198 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { CodeBlock } from "../../components/CodeBlock";
 import { CtaPanel, PageHeader, Section } from "../../components/Section";
-import { IconArrowRight } from "../../components/art";
-import { GATEWAY_URL } from "../../lib/env";
+import { IconArrowRight, IconBook, IconCode, IconShield, IconTile } from "../../components/art";
+import { API_REFERENCE_URL, DOCS_URL, GATEWAY_URL, OPENAPI_URL, SITE_URL, WIDGET_SCRIPT_URL } from "../../lib/env";
 import { DEFAULT_RATE_LIMIT_PER_MIN } from "../../lib/format";
 
-const sdkSnippet = `import { GatewayClient } from "stableflow-sdk";
+const createSnippet = `// npm install stableflow-sdk
+import { GatewayClient } from "stableflow-sdk";
 
 const gateway = new GatewayClient({
   baseUrl: "${GATEWAY_URL}",
-  apiKey: process.env.ARC_GATEWAY_KEY, // gw_live_… (server-side only)
+  apiKey: process.env.ARC_GATEWAY_KEY, // gw_live_… — server only
 });
 
-// 1. Register an end customer once
-const customer = await gateway.createCustomer({
-  externalId: "user_42",
-  recipientAddress: "0x1111111111111111111111111111111111111111",
-});
+const payment = await gateway.createPayment({
+  amount: "25.00",                 // USD
+  description: "Pro plan, 1 month",
+  reference: "order_1042",         // your order id
+});`;
 
-// 2. Get a fee-adjusted quote: 1 WETH on Base → USDC on ARC
-const quote = await gateway.quote({
-  originChainId: 8453,
-  destChainId: 5042,
-  tokenIn: "WETH",
-  tokenOut: "USDC",
-  amountIn: "1000000000000000000",
-  recipient: customer.recipientAddress,
-  slippageBps: 50,
-  deadline: Math.floor(Date.now() / 1000) + 600,
-  customerId: customer.customerId,
-});
-console.log(quote.feeAmount, quote.estimatedOut, quote.minOut);
+const checkoutSnippet = `import { checkoutUrl } from "stableflow-sdk";
 
-// 3. Have the customer sign the intent, submit it, and wait for settlement
-const signedPayload = await signWithCustomerWallet(quote); // your wallet integration
-const intent = await gateway.submitAndPoll(
-  { quoteId: quote.quoteId, signedPayload },
-  { onUpdate: (i) => console.log(i.status) },
-);`;
+// Option A: redirect to the hosted checkout
+res.redirect(checkoutUrl({
+  checkoutBaseUrl: "${SITE_URL || "https://your-site"}",
+  paymentId: payment.paymentId,
+  publishableKey: process.env.ARC_PUBLISHABLE_KEY!, // pk_live_…
+}));`;
 
-const curlSnippet = `curl -X POST ${GATEWAY_URL}/v1/quotes \\
+const embedSnippet = `<!-- Option B: embed it in your page -->
+<script type="module" src="${WIDGET_SCRIPT_URL}"></script>
+<arc-checkout
+  publishable-key="pk_live_…"
+  base-url="${GATEWAY_URL}"
+  payment-id="PAYMENT_ID"
+></arc-checkout>`;
+
+const webhookSnippet = `import { verifyWebhook } from "stableflow-sdk";
+
+app.post("/hooks/arc", express.raw({ type: "application/json" }), async (req, res) => {
+  const event = await verifyWebhook(
+    req.body.toString(),
+    req.header("arc-signature"),
+    process.env.ARC_WEBHOOK_SECRET!,
+  );
+  if (event.type === "payment.paid") await fulfilOrder(event.data.reference);
+  res.sendStatus(200);
+});`;
+
+const curlSnippet = `curl -X POST ${GATEWAY_URL}/v1/payments \\
   -H "Authorization: Bearer $ARC_GATEWAY_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{
-    "originChainId": 8453,
-    "destChainId": 5042,
-    "tokenIn": "WETH",
-    "tokenOut": "USDC",
-    "amountIn": "1000000000000000000",
-    "recipient": "0x1111111111111111111111111111111111111111",
-    "slippageBps": 50,
-    "deadline": 1893456000
-  }'`;
+  -d '{ "amount": "25.00", "reference": "order_1042" }'`;
 
-const errors = [
-  ["400", "Invalid input: unknown chain or token, bad amount, past deadline, or a customerId you don't own."],
+const errors: [string, string][] = [
+  ["400", "Invalid input: amount out of range, bad address, unsupported token, or no payout address set."],
   ["401", "Missing or wrong API key."],
-  ["409", "Signup email is already registered."],
+  ["403", "A publishable key used where a secret key is needed, or from an origin not on the key."],
+  ["404", "Not found, or it belongs to another account."],
+  ["409", "The payment is already paid, expired or canceled."],
   ["429", `Rate limited. Default ${DEFAULT_RATE_LIMIT_PER_MIN} requests/min per key; wait and retry.`],
   ["502", "The upstream pricing or settlement provider failed. Safe to retry."],
 ];
+
+const docsLink = (hash: string) => `${DOCS_URL}#${hash}`;
+
+const resources: { href: string; title: string; body: string; icon: ReactNode }[] = [
+  { href: DOCS_URL, title: "Documentation", body: "How payments work, end to end, with guides for every step.", icon: <IconBook /> },
+  { href: API_REFERENCE_URL, title: "API reference", body: "Every endpoint with request and response schemas. Try calls live.", icon: <IconCode /> },
+  { href: docsLink("security"), title: "Security model", body: "Non-custodial flow, key types, payer checks and signed webhooks.", icon: <IconShield /> },
+];
+
+function Step({ n, title, children, intro }: { n: number; title: string; intro: ReactNode; children: ReactNode }) {
+  return (
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-10">
+      <div>
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-ink-900 text-sm font-bold text-white">{n}</span>
+        <h3 className="mt-4 text-xl sm:text-2xl">{title}</h3>
+        <div className="mt-2 text-[15px] leading-relaxed text-ink-600">{intro}</div>
+      </div>
+      <div className="min-w-0 space-y-4">{children}</div>
+    </div>
+  );
+}
+
+const A = ({ href, children }: { href: string; children: ReactNode }) => (
+  <a href={href} className="font-medium text-ink-900 underline underline-offset-4">
+    {children}
+  </a>
+);
 
 export function Developers() {
   return (
     <>
       <PageHeader
-        eyebrow="Docs"
-        title="Developers"
-        intro="A typed TypeScript SDK and a plain REST API. Every response is JSON; every error is { error: string }."
+        eyebrow="Developers"
+        title="Build with ARC Gateway"
+        intro="A REST API and a typed SDK. Charge in dollars, let customers pay with any token, and receive USDC on ARC."
       />
 
-      <Section title="TypeScript SDK" intro="stableflow-sdk wraps every endpoint with typed requests and responses.">
-        <CodeBlock title="server.ts" code={sdkSnippet} />
-        <p className="mt-4 text-sm text-ink-600">
-          Keep your <code className="font-mono">gw_live_</code> key on your server. Never ship it to a browser or mobile
-          app.
-        </p>
-      </Section>
+      <section className="mx-auto max-w-6xl px-4 pt-12 sm:pt-16">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {resources.map((r) => (
+            <a key={r.title} href={r.href} className="card group flex gap-4 p-5 transition hover:-translate-y-0.5 sm:flex-col sm:p-6">
+              <IconTile>{r.icon}</IconTile>
+              <span className="min-w-0">
+                <span className="flex items-center gap-1.5 font-semibold text-ink-900">
+                  {r.title}
+                  <IconArrowRight size={16} className="transition group-hover:translate-x-0.5" />
+                </span>
+                <span className="mt-1 block text-sm leading-relaxed text-ink-600">{r.body}</span>
+              </span>
+            </a>
+          ))}
+        </div>
+      </section>
 
-      <Section title="REST API" intro="Prefer raw HTTP? Authenticate with a bearer token.">
-        <CodeBlock title="Request a quote" code={curlSnippet} />
-        <p className="mt-4 text-sm text-ink-600">
-          Full reference with request and response schemas:{" "}
-          <a href={`${GATEWAY_URL}/docs`} className="font-medium text-ink-900 underline underline-offset-4">
-            interactive API docs
-          </a>{" "}
-          ·{" "}
-          <a href={`${GATEWAY_URL}/openapi.json`} className="font-medium text-ink-900 underline underline-offset-4">
-            OpenAPI spec
-          </a>
-        </p>
-      </Section>
-
-      <Section title="Errors">
-        <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-mist-200 bg-mist-50 text-left text-ink-600">
-              <th className="px-5 py-3 font-medium">Status</th>
-              <th className="px-5 py-3 font-medium">Meaning</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-mist-100">
-            {errors.map(([code, meaning]) => (
-              <tr key={code}>
-                <td className="px-5 py-3">
-                  <span className="rounded-full bg-brand-100 px-2.5 py-0.5 font-mono text-ink-900">{code}</span>
-                </td>
-                <td className="px-5 py-3 text-ink-600">{meaning}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <Section title="Accept a payment in three steps" intro="Server-side code in Node; any language works over REST.">
+        <div className="space-y-14 sm:space-y-20">
+          <Step
+            n={1}
+            title="Create a payment"
+            intro={
+              <>
+                From your server, with your secret key, when the customer is ready to pay. You get back a{" "}
+                <code className="font-mono text-ink-900">paymentId</code>.{" "}
+                <A href={docsLink("payments")}>All options</A>
+              </>
+            }
+          >
+            <CodeBlock title="server.ts" code={createSnippet} />
+          </Step>
+          <Step
+            n={2}
+            title="Send the customer to checkout"
+            intro={
+              <>
+                Redirect to the hosted page or embed the widget. Either way the customer connects their wallet, picks
+                tokens and confirms. Your branding applies automatically. <A href={docsLink("checkout")}>Checkout guide</A>
+              </>
+            }
+          >
+            <CodeBlock title="server.ts" code={checkoutSnippet} />
+            <CodeBlock title="checkout.html" code={embedSnippet} />
+          </Step>
+          <Step
+            n={3}
+            title="Fulfil on the webhook"
+            intro={
+              <>
+                Settlement on ARC takes minutes. When it's done, a signed{" "}
+                <code className="font-mono text-ink-900">payment.paid</code> webhook reaches your server.{" "}
+                <A href={docsLink("webhooks")}>Webhooks guide</A>
+              </>
+            }
+          >
+            <CodeBlock title="webhooks.ts" code={webhookSnippet} />
+          </Step>
         </div>
       </Section>
 
-      <CtaPanel title="Get started">
+      <div className="bg-white">
+        <Section title="REST API" intro={<>Base URL <code className="break-all font-mono text-[0.9em] text-ink-900">{GATEWAY_URL}</code>. Authenticate with a bearer token.</>}>
+          <CodeBlock title="Create a payment" code={curlSnippet} />
+          <div className="mt-6 flex flex-wrap gap-3">
+            <a href={API_REFERENCE_URL} className="btn-primary">
+              Interactive API reference <IconArrowRight size={18} />
+            </a>
+            <a href={OPENAPI_URL} className="btn-secondary">
+              OpenAPI spec
+            </a>
+          </div>
+        </Section>
+      </div>
+
+      <Section title="Errors" intro={<>Every error is JSON <code className="font-mono text-[0.9em] text-ink-900">{"{ error: string }"}</code> with an HTTP status.</>}>
+        <ul className="card divide-y divide-ink-900/5 overflow-hidden">
+          {errors.map(([code, meaning]) => (
+            <li key={code} className="flex items-start gap-4 px-5 py-4">
+              <span className="shrink-0 rounded-full bg-brand-100 px-2.5 py-0.5 font-mono text-sm text-ink-900">{code}</span>
+              <span className="text-[15px] leading-relaxed text-ink-600">{meaning}</span>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      <CtaPanel title="Ready when you are.">
         <Link to="/signup" className="btn-glass">
-          Get your API key <IconArrowRight size={18} />
+          Get your API keys <IconArrowRight size={18} />
         </Link>
+        <a href={DOCS_URL} className="btn-outline-light">
+          Read the docs
+        </a>
       </CtaPanel>
     </>
   );

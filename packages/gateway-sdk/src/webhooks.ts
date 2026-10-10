@@ -31,8 +31,8 @@ export async function verifyWebhook<T = WebhookEvent>(
   return JSON.parse(rawBody) as T;
 }
 
+/** Webhook body. The unique delivery id is in the arc-delivery-id header (use it to drop duplicates). */
 export interface WebhookEvent {
-  id: string;
   type: "payment.processing" | "payment.paid" | "payment.partially_paid" | "payment.expired" | "ping";
   created: string;
   data: Record<string, unknown>;

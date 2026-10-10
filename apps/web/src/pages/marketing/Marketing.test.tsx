@@ -39,7 +39,16 @@ describe("marketing pages", () => {
   it("shows a real SDK snippet on developers", () => {
     renderApp("/developers");
     expect(screen.getByText(/import \{ GatewayClient \} from "stableflow-sdk"/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "interactive API docs" })).toHaveAttribute("href", "http://localhost:3000/docs");
+    expect(screen.getByRole("link", { name: /Interactive API reference/ })).toHaveAttribute("href", "http://localhost:3000/docs");
+    expect(screen.getByRole("link", { name: /Documentation/ })).toHaveAttribute("href", "/docs");
+  });
+
+  it("serves the documentation at /docs with its contents", async () => {
+    renderApp("/docs");
+    expect(await screen.findByRole("heading", { level: 1, name: "Accept any token. Get USDC on ARC." })).toBeInTheDocument();
+    for (const section of ["How a payment works", "Webhooks", "Payment lifecycle", "REST API"]) {
+      expect(screen.getByRole("heading", { level: 2, name: section })).toBeInTheDocument();
+    }
   });
 });
 

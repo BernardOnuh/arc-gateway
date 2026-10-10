@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { IconClose, IconMenu } from "../components/art";
+import { DOCS_URL } from "../lib/env";
 import { Logo } from "../components/Logo";
 import { ThemeToggle } from "../components/ThemeToggle";
 
@@ -33,6 +34,9 @@ export function MarketingLayout() {
                 {item.label}
               </NavLink>
             ))}
+            <a href={DOCS_URL} className="text-snow/85 transition hover:text-snow">
+              Docs
+            </a>
             <Link to="/app/login" className="text-snow/85 transition hover:text-snow">
               Sign in
             </Link>
@@ -69,6 +73,9 @@ export function MarketingLayout() {
                 {item.label}
               </NavLink>
             ))}
+            <a href={DOCS_URL} className="rounded-2xl px-4 py-3 text-snow/85 transition hover:text-snow">
+              Docs
+            </a>
             <Link to="/app/login" className="rounded-2xl px-4 py-3 text-snow/85 transition hover:text-snow">
               Sign in
             </Link>
@@ -95,6 +102,9 @@ export function MarketingLayout() {
                 {item.label}
               </Link>
             ))}
+            <a href={DOCS_URL} className="transition hover:text-ink-900">
+              Docs
+            </a>
             <Link to="/account/login" className="transition hover:text-ink-900">
               Customer sign in
             </Link>

@@ -34,7 +34,7 @@ describe("routing", () => {
   it("renders each marketing page", () => {
     for (const [path, title] of [
       ["/how-it-works", "How it works"],
-      ["/developers", "Developers"],
+      ["/developers", "Build with ARC Gateway"],
       ["/pricing", "Pricing"],
       ["/signup", "Get your API key"],
     ]) {
