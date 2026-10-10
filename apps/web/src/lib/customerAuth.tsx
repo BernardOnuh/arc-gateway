@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CustomerClient, type CustomerSession } from "@arc/gateway-sdk";
+import { CustomerClient, type CustomerSession } from "stableflow-sdk";
 import { GATEWAY_URL } from "./env";
 import { readStored, writeStored } from "./storage";
 

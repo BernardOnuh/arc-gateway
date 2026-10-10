@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import type { Ledger } from "@arc/gateway-sdk";
+import type { Ledger } from "stableflow-sdk";
 import { chains, gatewaySession, mockGateway, profile, renderApp, startSession, tokens } from "../../test/render";
 import { ledgerToCsv } from "./Ledger";
 

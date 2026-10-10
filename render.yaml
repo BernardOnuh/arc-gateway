@@ -61,7 +61,7 @@ services:
     buildCommand: >-
       corepack enable &&
       pnpm install --frozen-lockfile &&
-      pnpm --filter @arc/gateway-sdk build &&
+      pnpm --filter stableflow-sdk build &&
       pnpm --filter @arc/widget build &&
       VITE_GATEWAY_URL=https://$API_HOST pnpm --filter @arc/web build &&
       cp -r packages/arc-widget/dist/standalone apps/web/dist/widget

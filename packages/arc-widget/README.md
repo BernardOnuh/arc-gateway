@@ -54,7 +54,7 @@ In a bundler, `import { defineArcSwapWidget } from "@arc/widget/element"` regist
 ## Server side (submit)
 
 ```ts
-import { GatewayClient } from "@arc/gateway-sdk";
+import { GatewayClient } from "stableflow-sdk";
 const gateway = new GatewayClient({ baseUrl, apiKey: process.env.ARC_GATEWAY_KEY });
 
 app.post("/api/arc/submit", async (req, res) => {

@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { GatewayError } from "@arc/gateway-sdk";
+import { GatewayError } from "stableflow-sdk";
 
 export function createQueryClient(): QueryClient {
   return new QueryClient({

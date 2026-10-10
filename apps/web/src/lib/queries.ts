@@ -8,7 +8,7 @@ import type {
   ListQuotesParams,
   PageParams,
   TokenInfo,
-} from "@arc/gateway-sdk";
+} from "stableflow-sdk";
 import { useGateway } from "./auth";
 import { publicClient } from "./gateway";
 

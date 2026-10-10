@@ -1,26 +1,58 @@
 {
-  "name": "@arc/gateway-sdk",
+  "name": "stableflow-sdk",
   "version": "0.1.0",
-  "description": "Typed TypeScript client for the ARC Gateway B2B API",
+  "description": "TypeScript client for the Stableflow (ARC Gateway) API: checkout payments in any token, settled as USDC on ARC.",
+  "keywords": [
+    "payments",
+    "checkout",
+    "usdc",
+    "stablecoin",
+    "arc",
+    "circle",
+    "crypto",
+    "sdk"
+  ],
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BernardOnuh/arc-gateway.git",
+    "directory": "packages/gateway-sdk"
+  },
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
   },
-  "files": ["dist"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "rm -rf dist && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && esbuild src/index.ts --bundle --platform=neutral --format=cjs --target=es2022 --outfile=dist/cjs/index.js && node scripts/mark-cjs.mjs",
     "test": "vitest run",
-    "smoke": "tsx scripts/smoke.ts"
+    "smoke": "tsx scripts/smoke.ts",
+    "prepublishOnly": "pnpm test && pnpm build"
   },
   "devDependencies": {
+    "esbuild": "0.28.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
-  },
-  "license": "ISC"
+  }
 }

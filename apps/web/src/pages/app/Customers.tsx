@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import type { Customer, LedgerCustomer } from "@arc/gateway-sdk";
+import type { Customer, LedgerCustomer } from "stableflow-sdk";
 import { CopyButton } from "../../components/CopyButton";
 import {
   buttonClass,

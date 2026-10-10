@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GatewayError, type CustomerAccount } from "@arc/gateway-sdk";
+import { GatewayError, type CustomerAccount } from "stableflow-sdk";
 import { buttonClass, Card, ErrorState, inputClass, Loading, secondaryButtonClass } from "../../components/dashboard/ui";
 import { CUSTOMER_PARTNER_STORAGE, useCustomerAuth } from "../../lib/customerAuth";
 import { writeStored } from "../../lib/storage";

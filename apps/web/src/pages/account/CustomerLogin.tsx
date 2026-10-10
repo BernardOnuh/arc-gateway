@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { GatewayError } from "@arc/gateway-sdk";
+import { GatewayError } from "stableflow-sdk";
 import { buttonClass, inputClass } from "../../components/dashboard/ui";
 import { CUSTOMER_PARTNER_STORAGE, useCustomerAuth } from "../../lib/customerAuth";
 import { describeError } from "../../lib/gateway";

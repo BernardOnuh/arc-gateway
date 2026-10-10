@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ApiKeySummary } from "@arc/gateway-sdk";
+import type { ApiKeySummary } from "stableflow-sdk";
 import { CopyButton } from "../CopyButton";
 import { useGateway } from "../../lib/auth";
 import { describeError } from "../../lib/gateway";

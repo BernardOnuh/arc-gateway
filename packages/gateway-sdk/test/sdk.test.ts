@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CustomerClient, GatewayClient, GatewayError, verifyWebhook } from "../src/index.js";
+import { CustomerClient, GatewayClient, GatewayError, checkoutUrl, verifyWebhook } from "../src/index.js";
 
 interface Call {
   url: string;
@@ -232,5 +232,31 @@ describe("GatewayClient", () => {
       globalThis.fetch = original;
     }
     expect(receiver).not.toBeInstanceOf(GatewayClient);
+  });
+
+  it("waitForPayment polls until the payment is final", async () => {
+    const statuses = ["open", "processing", "processing", "paid"];
+    let n = 0;
+    const { client, calls } = makeClient(() => ({ status: 200, body: { paymentId: "p 1", status: statuses[n++] } }));
+    const seen: string[] = [];
+    const payment = await client.waitForPayment("p 1", { pollIntervalMs: 1, onUpdate: (p) => seen.push(p.status) });
+    expect(payment.status).toBe("paid");
+    expect(seen).toEqual(statuses);
+    expect(calls[0].url).toBe("http://gw.test/v1/payments/p%201");
+  });
+
+  it("waitForPayment stops on expiry and times out on a stuck payment", async () => {
+    const expired = makeClient(ok({ paymentId: "p1", status: "expired" })).client;
+    expect((await expired.waitForPayment("p1", { pollIntervalMs: 1 })).status).toBe("expired");
+    const stuck = makeClient(ok({ paymentId: "p1", status: "processing" })).client;
+    await expect(stuck.waitForPayment("p1", { pollIntervalMs: 1, timeoutMs: 5 })).rejects.toBeInstanceOf(GatewayError);
+  });
+});
+
+describe("checkoutUrl", () => {
+  it("builds the hosted checkout link", () => {
+    expect(checkoutUrl({ checkoutBaseUrl: "https://pay.example.com/", paymentId: "p-1", publishableKey: "pk_live_a+b" })).toBe(
+      "https://pay.example.com/checkout/p-1?key=pk_live_a%2Bb"
+    );
   });
 });

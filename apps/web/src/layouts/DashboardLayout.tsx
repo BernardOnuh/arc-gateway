@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { GatewayError } from "@arc/gateway-sdk";
+import { GatewayError } from "stableflow-sdk";
 import { Logo } from "../components/Logo";
 import { NewKeyDialog } from "../components/dashboard/NewKeyDialog";
 import { ThemeToggle } from "../components/ThemeToggle";

@@ -358,7 +358,7 @@ function TextTab({ value, onChange }: { value: CheckoutBranding; onChange: (b: C
 }
 
 const serverSnippet = `// Your server (Node). The secret key never reaches the browser.
-import { GatewayClient } from "@arc/gateway-sdk";
+import { GatewayClient } from "stableflow-sdk";
 
 const gateway = new GatewayClient({
   baseUrl: "${GATEWAY_URL}",

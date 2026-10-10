@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { IntentStatus } from "@arc/gateway-sdk";
+import type { IntentStatus } from "stableflow-sdk";
 import { Amount, ChainName, TxLink } from "../../components/dashboard/Amount";
 import { Card, Empty, ErrorState, Loading, PageTitle, Pagination, StatusBadge } from "../../components/dashboard/ui";
 import { formatDate, shortId } from "../../lib/format";

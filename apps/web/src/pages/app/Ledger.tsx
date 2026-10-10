@@ -1,5 +1,5 @@
 import { Card, Empty, ErrorState, Loading, PageTitle, secondaryButtonClass, Stat, tokenTotalsText } from "../../components/dashboard/ui";
-import type { Ledger as LedgerData } from "@arc/gateway-sdk";
+import type { Ledger as LedgerData } from "stableflow-sdk";
 import { formatBps, formatUnits } from "../../lib/format";
 import { useLedger } from "../../lib/queries";
 

@@ -49,6 +49,26 @@ export interface PollOptions {
   onUpdate?: (intent: Intent) => void;
 }
 
+export interface PaymentPollOptions {
+  /** Default 5s. Settlement on ARC usually takes minutes, so there's no need to poll fast. */
+  pollIntervalMs?: number;
+  /** Default 1 hour. */
+  timeoutMs?: number;
+  onUpdate?: (payment: Payment) => void;
+}
+
+/** Payment states that won't change again. */
+const FINAL_PAYMENT_STATUSES = new Set(["paid", "expired", "canceled"]);
+
+/**
+ * Link to the hosted checkout page for a payment. `checkoutBaseUrl` is the web
+ * app's origin (not the API's); the publishable key must allow that origin.
+ */
+export function checkoutUrl(params: { checkoutBaseUrl: string; paymentId: string; publishableKey: string }): string {
+  const base = params.checkoutBaseUrl.replace(/\/+$/, "");
+  return `${base}/checkout/${encodeURIComponent(params.paymentId)}?key=${encodeURIComponent(params.publishableKey)}`;
+}
+
 export class GatewayClient {
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof fetch;
@@ -211,6 +231,24 @@ export class GatewayClient {
 
   listPayments(params: PageParams = {}, apiKey?: string): Promise<Page<Payment>> {
     return this.request("GET", "/v1/payments", { query: { ...params }, apiKey });
+  }
+
+  /**
+   * Polls a payment until it is paid, expired or canceled, and returns it.
+   * Prefer webhooks (payment.paid) in production; this suits scripts and tests.
+   */
+  async waitForPayment(paymentId: string, options: PaymentPollOptions = {}, apiKey?: string): Promise<Payment> {
+    const interval = options.pollIntervalMs ?? 5000;
+    const deadline = Date.now() + (options.timeoutMs ?? 60 * 60_000);
+    for (;;) {
+      const payment = await this.getPayment(paymentId, apiKey);
+      options.onUpdate?.(payment);
+      if (FINAL_PAYMENT_STATUSES.has(payment.status)) return payment;
+      if (Date.now() > deadline) {
+        throw new GatewayError(0, { error: "payment poll timed out" }, `/v1/payments/${paymentId}`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, interval));
+    }
   }
 
   /** One-time token for the customer to set their password (no email is sent). */

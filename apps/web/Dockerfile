@@ -13,7 +13,7 @@ COPY apps/web/package.json apps/web/
 RUN pnpm install --frozen-lockfile --filter @arc/web...
 COPY packages ./packages
 COPY apps/web ./apps/web
-RUN pnpm --filter @arc/gateway-sdk build && pnpm --filter @arc/widget build && pnpm --filter @arc/web build
+RUN pnpm --filter stableflow-sdk build && pnpm --filter @arc/widget build && pnpm --filter @arc/web build
 
 FROM nginx:1.27-alpine
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf

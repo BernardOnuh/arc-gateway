@@ -5,7 +5,7 @@ import { IconArrowRight } from "../../components/art";
 import { GATEWAY_URL } from "../../lib/env";
 import { DEFAULT_RATE_LIMIT_PER_MIN } from "../../lib/format";
 
-const sdkSnippet = `import { GatewayClient } from "@arc/gateway-sdk";
+const sdkSnippet = `import { GatewayClient } from "stableflow-sdk";
 
 const gateway = new GatewayClient({
   baseUrl: "${GATEWAY_URL}",
@@ -70,7 +70,7 @@ export function Developers() {
         intro="A typed TypeScript SDK and a plain REST API. Every response is JSON; every error is { error: string }."
       />
 
-      <Section title="TypeScript SDK" intro="@arc/gateway-sdk wraps every endpoint with typed requests and responses.">
+      <Section title="TypeScript SDK" intro="stableflow-sdk wraps every endpoint with typed requests and responses.">
         <CodeBlock title="server.ts" code={sdkSnippet} />
         <p className="mt-4 text-sm text-ink-600">
           Keep your <code className="font-mono">gw_live_</code> key on your server. Never ship it to a browser or mobile

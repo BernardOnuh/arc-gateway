@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import type { WebhookEndpoint } from "@arc/gateway-sdk";
+import type { WebhookEndpoint } from "stableflow-sdk";
 import { CopyButton } from "../CopyButton";
 import { describeError } from "../../lib/gateway";
 import { formatDate } from "../../lib/format";

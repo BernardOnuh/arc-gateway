@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { EmptyArt } from "../art";
-import type { IntentStatus, LedgerTokenTotals } from "@arc/gateway-sdk";
+import type { IntentStatus, LedgerTokenTotals } from "stableflow-sdk";
 import { describeError } from "../../lib/gateway";
 import { formatUnits } from "../../lib/format";
 

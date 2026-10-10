@@ -99,9 +99,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@arc/gateway-sdk':
-        specifier: workspace:*
-        version: link:../../packages/gateway-sdk
       '@arc/widget':
         specifier: workspace:*
         version: link:../../packages/arc-widget
@@ -123,6 +120,9 @@ importers:
       react-router-dom:
         specifier: 6.30.6
         version: 6.30.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      stableflow-sdk:
+        specifier: workspace:*
+        version: link:../../packages/gateway-sdk
     devDependencies:
       '@testing-library/dom':
         specifier: 10.4.1
@@ -221,6 +221,9 @@ importers:
 
   packages/gateway-sdk:
     devDependencies:
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
