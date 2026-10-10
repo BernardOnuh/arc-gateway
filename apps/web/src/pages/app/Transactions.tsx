@@ -51,7 +51,7 @@ export function Transactions() {
             <select
               value={status ?? ""}
               onChange={(e) => update({ status: e.target.value || undefined })}
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-sm shadow-sm"
             >
               <option value="">All</option>
               {STATUSES.map((s) => (

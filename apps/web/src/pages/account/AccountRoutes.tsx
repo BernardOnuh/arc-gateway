@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { GlowBackdrop } from "../../components/art";
 import { Logo } from "../../components/Logo";
 import { CustomerAuthProvider, useCustomerAuth } from "../../lib/customerAuth";
 import { NotFound } from "../NotFound";
@@ -9,10 +10,13 @@ import { Setup } from "./Setup";
 
 function AccountShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10">
-      <div className="mx-auto max-w-lg">
-        <div className="mb-6 flex justify-center">
-          <Logo to="/account" />
+    <div className="relative min-h-screen bg-slate-50">
+      <div className="absolute inset-x-0 top-0 h-72 overflow-hidden bg-ink-950">
+        <GlowBackdrop />
+      </div>
+      <div className="relative mx-auto max-w-lg px-4 py-10">
+        <div className="mb-8 flex justify-center">
+          <Logo to="/account" tone="light" />
         </div>
         {children}
       </div>

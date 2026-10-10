@@ -1,6 +1,18 @@
 import { Link } from "react-router-dom";
+import { GlowBackdrop, HeroNetwork } from "../../components/art";
 import { Amount, ChainName } from "../../components/dashboard/Amount";
-import { Card, Empty, ErrorState, Loading, PageTitle, Stat, StatusBadge, tokenTotalsText } from "../../components/dashboard/ui";
+import {
+  buttonClass,
+  Card,
+  Empty,
+  ErrorState,
+  Loading,
+  PageTitle,
+  secondaryButtonClass,
+  Stat,
+  StatusBadge,
+  tokenTotalsText,
+} from "../../components/dashboard/ui";
 import { formatBps, formatDate } from "../../lib/format";
 import { useCatalog, useCustomers, useLedger, usePartnerProfile, useQuotes } from "../../lib/queries";
 
@@ -22,15 +34,28 @@ export function Overview() {
         }
         actions={
           <div className="flex gap-2">
-            <Link to="/app/customers" className="rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
+            <Link to="/app/customers" className={buttonClass}>
               Add customer
             </Link>
-            <Link to="/developers" className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            <Link to="/developers" className={secondaryButtonClass}>
               Integration docs
             </Link>
           </div>
         }
       />
+
+      <div className="relative mb-6 overflow-hidden rounded-2xl bg-ink-950 px-6 py-8 text-white sm:px-8">
+        <GlowBackdrop />
+        <div className="relative flex items-center justify-between gap-6">
+          <div>
+            <p className="text-sm text-ink-300">Welcome back{profile.data ? `, ${profile.data.name}` : ""}</p>
+            <p className="mt-1 max-w-md font-display text-xl font-semibold">
+              Every quote, intent and fee your customers generate, routed to ARC.
+            </p>
+          </div>
+          <HeroNetwork className="-my-6 hidden h-40 w-auto shrink-0 md:block" />
+        </div>
+      </div>
 
       {ledger.error ? (
         <ErrorState error={ledger.error} onRetry={() => void ledger.refetch()} />

@@ -15,10 +15,12 @@ describe("marketing pages", () => {
   it("shows live supported networks on the home page", async () => {
     mockGateway((url) => catalog(url) ?? { status: 404, body: { error: "not found" } });
     renderApp("/");
-    const base = (await screen.findByText("Base")).closest("li")!;
-    expect(within(base).getByText("WETH, USDC")).toBeInTheDocument();
+    const list = await screen.findByRole("list", { name: "Supported networks" });
+    const base = within(list).getByText("Base").closest("li")!;
+    expect(within(base).getByText("WETH")).toBeInTheDocument();
+    expect(within(base).getByText("USDC")).toBeInTheDocument();
     expect(within(base).getByText("Source")).toBeInTheDocument();
-    const arc = screen.getByText("Arc").closest("li")!;
+    const arc = within(list).getByText("Arc").closest("li")!;
     expect(within(arc).getByText("Destination")).toBeInTheDocument();
   });
 

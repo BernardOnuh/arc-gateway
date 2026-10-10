@@ -33,7 +33,7 @@ export function CopyButton({
     <button
       type="button"
       onClick={copy}
-      className={`rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 ${className}`}
+      className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${className || "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}
     >
       {state === "copied" ? "Copied" : state === "failed" ? "Copy failed, select manually" : label}
     </button>

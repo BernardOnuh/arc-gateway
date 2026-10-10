@@ -1,12 +1,21 @@
 import { Link } from "react-router-dom";
-import { PageHeader, Section } from "../../components/Section";
+import { CtaPanel, PageHeader, Section } from "../../components/Section";
+import { IconArrowRight, IconLayers, IconSwap, IconTile, IconUsers, IconWallet } from "../../components/art";
 
 const flow = [
-  { name: "Your customer", detail: "Picks a source chain and token in your app" },
-  { name: "Your business", detail: "Calls the gateway with your API key" },
-  { name: "ARC Gateway", detail: "Prices the swap, applies your fee, routes the intent" },
-  { name: "ARC network", detail: "Funds settle to the customer's address" },
+  { icon: <IconUsers />, name: "Your customer", detail: "Picks a source chain and token in your app" },
+  { icon: <IconLayers />, name: "Your business", detail: "Calls the gateway with your API key" },
+  { icon: <IconSwap />, name: "ARC Gateway", detail: "Prices the swap, applies your fee, routes the intent" },
+  { icon: <IconWallet />, name: "ARC network", detail: "Funds settle to the customer's address" },
 ];
+
+const lifecycleTone: Record<string, string> = {
+  PENDING: "bg-slate-300",
+  ORIGIN_CONFIRMED: "bg-blue-400",
+  FILLED: "bg-brand-400",
+  EXECUTED_ON_ARC: "bg-emerald-400",
+  "FAILED / REFUNDED": "bg-rose-400",
+};
 
 const lifecycle = [
   { status: "PENDING", detail: "Intent accepted, waiting for the origin transaction." },
@@ -20,39 +29,43 @@ export function HowItWorks() {
   return (
     <>
       <PageHeader
+        eyebrow="The flow"
         title="How it works"
         intro="ARC Gateway sits between your product and the ARC network. You keep the customer relationship; we handle routing and settlement."
       />
 
       <Section title="The flow">
-        <ol className="flex flex-col gap-3 md:flex-row md:items-stretch">
+        <ol className="relative grid gap-4 md:grid-cols-4">
+          {/* connector line behind the cards on desktop */}
+          <span
+            aria-hidden
+            className="absolute left-[12%] right-[12%] top-[46px] hidden h-px bg-gradient-to-r from-brand-400 via-[#7aa2ff] to-accent-400 md:block"
+          />
           {flow.map((step, i) => (
-            <li key={step.name} className="flex flex-1 items-center gap-3 md:flex-col md:items-stretch">
-              <div className="flex-1 rounded-lg border border-slate-200 p-4">
-                <p className="font-medium">{step.name}</p>
-                <p className="mt-1 text-sm text-slate-600">{step.detail}</p>
+            <li key={step.name} className="card relative p-5">
+              <div className="flex items-center gap-3">
+                <IconTile>{step.icon}</IconTile>
+                <span className="font-mono text-xs text-slate-400">step {i + 1}</span>
               </div>
-              {i < flow.length - 1 && (
-                <span aria-hidden className="text-slate-400 md:hidden">
-                  ↓
-                </span>
-              )}
+              <p className="mt-4 font-display text-lg font-semibold">{step.name}</p>
+              <p className="mt-1 text-sm text-slate-600">{step.detail}</p>
             </li>
           ))}
         </ol>
       </Section>
 
+      <div className="bg-slate-50">
       <Section title="Who's who">
         <dl className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-lg border border-slate-200 p-5">
-            <dt className="font-medium">Partner (you)</dt>
+          <div className="card p-6">
+            <dt className="font-display text-lg font-semibold">Partner (you)</dt>
             <dd className="mt-1 text-sm text-slate-600">
               A business integrating the gateway. You hold the secret API key, register customers, and earn
               revenue on every transaction your customers make.
             </dd>
           </div>
-          <div className="rounded-lg border border-slate-200 p-5">
-            <dt className="font-medium">Customer</dt>
+          <div className="card p-6">
+            <dt className="font-display text-lg font-semibold">Customer</dt>
             <dd className="mt-1 text-sm text-slate-600">
               Your end user. They never see an API key. Each customer has an address that receives funds on ARC,
               and their transactions show up in your ledger.
@@ -60,31 +73,30 @@ export function HowItWorks() {
           </div>
         </dl>
       </Section>
+      </div>
 
       <Section title="Transaction lifecycle" intro="Every submitted intent moves through these statuses. Poll it, or watch it in your dashboard.">
-        <ol className="divide-y divide-slate-200 rounded-lg border border-slate-200">
+        <ol className="card divide-y divide-slate-100 overflow-hidden">
           {lifecycle.map((s) => (
-            <li key={s.status} className="flex flex-col gap-1 p-4 sm:flex-row sm:gap-6">
-              <code className="w-48 shrink-0 font-mono text-sm text-brand-700">{s.status}</code>
+            <li key={s.status} className="flex flex-col gap-1 p-4 sm:flex-row sm:items-center sm:gap-6 sm:px-6">
+              <code className="flex w-56 shrink-0 items-center gap-2.5 font-mono text-sm text-brand-700">
+                <span aria-hidden className={`h-2 w-2 rounded-full ${lifecycleTone[s.status]}`} />
+                {s.status}
+              </code>
               <span className="text-sm text-slate-600">{s.detail}</span>
             </li>
           ))}
         </ol>
       </Section>
 
-      <Section title="Ready to integrate?">
-        <div className="flex flex-wrap gap-3">
-          <Link to="/signup" className="rounded-md bg-brand-600 px-5 py-3 font-medium text-white hover:bg-brand-700">
-            Get your API key
-          </Link>
-          <Link
-            to="/developers"
-            className="rounded-md border border-slate-300 px-5 py-3 font-medium text-slate-700 hover:bg-slate-50"
-          >
-            Developer docs
-          </Link>
-        </div>
-      </Section>
+      <CtaPanel title="Ready to integrate?">
+        <Link to="/signup" className="btn-primary">
+          Get your API key <IconArrowRight size={18} />
+        </Link>
+        <Link to="/developers" className="btn-ghost-dark">
+          Developer docs
+        </Link>
+      </CtaPanel>
     </>
   );
 }

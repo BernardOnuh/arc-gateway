@@ -22,8 +22,8 @@ export function CustomerLogin() {
 
   if (!partnerId) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-6">
-        <h1 className="text-lg font-semibold">Sign in</h1>
+      <div className="card p-7">
+        <h1 className="text-2xl font-semibold">Sign in</h1>
         <p className="mt-2 text-sm text-slate-600">
           Open the sign-in link from the business you use. If you haven't set a password yet, ask them for a setup link.
         </p>
@@ -49,8 +49,8 @@ export function CustomerLogin() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-lg border border-slate-200 bg-white p-6">
-      <h1 className="text-lg font-semibold">Sign in to your account</h1>
+    <form onSubmit={onSubmit} className="space-y-4 card p-7">
+      <h1 className="text-2xl font-semibold">Sign in to your account</h1>
       <div>
         <label htmlFor="login-email" className="block text-sm font-medium text-slate-700">
           Email

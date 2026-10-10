@@ -22,8 +22,8 @@ export function Setup() {
 
   if (!token) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-6">
-        <h1 className="text-lg font-semibold">Set up your account</h1>
+      <div className="card p-7">
+        <h1 className="text-2xl font-semibold">Set up your account</h1>
         <p className="mt-2 text-sm text-slate-600">
           This page needs the setup link from the business you use. Ask them for a new link, or{" "}
           <Link to="/account/login" className="font-medium text-brand-600 hover:underline">
@@ -51,9 +51,9 @@ export function Setup() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-lg border border-slate-200 bg-white p-6">
+    <form onSubmit={onSubmit} className="space-y-4 card p-7">
       <div>
-        <h1 className="text-lg font-semibold">Set up your account</h1>
+        <h1 className="text-2xl font-semibold">Set up your account</h1>
         <p className="mt-1 text-sm text-slate-500">Choose the email and password you'll sign in with.</p>
       </div>
       <div>

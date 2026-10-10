@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CodeBlock } from "../../components/CodeBlock";
-import { PageHeader, Section } from "../../components/Section";
+import { CtaPanel, PageHeader, Section } from "../../components/Section";
+import { IconArrowRight } from "../../components/art";
 import { GATEWAY_URL } from "../../lib/env";
 import { DEFAULT_RATE_LIMIT_PER_MIN } from "../../lib/format";
 
@@ -64,6 +65,7 @@ export function Developers() {
   return (
     <>
       <PageHeader
+        eyebrow="Docs"
         title="Developers"
         intro="A typed TypeScript SDK and a plain REST API. Every response is JSON; every error is { error: string }."
       />
@@ -91,29 +93,33 @@ export function Developers() {
       </Section>
 
       <Section title="Errors">
+        <div className="card overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-left text-slate-500">
-              <th className="py-2 pr-4 font-medium">Status</th>
-              <th className="py-2 font-medium">Meaning</th>
+            <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
+              <th className="px-5 py-3 font-medium">Status</th>
+              <th className="px-5 py-3 font-medium">Meaning</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-200">
+          <tbody className="divide-y divide-slate-100">
             {errors.map(([code, meaning]) => (
               <tr key={code}>
-                <td className="py-2 pr-4 font-mono">{code}</td>
-                <td className="py-2 text-slate-600">{meaning}</td>
+                <td className="px-5 py-3">
+                  <span className="rounded-md bg-brand-50 px-2 py-0.5 font-mono text-brand-700">{code}</span>
+                </td>
+                <td className="px-5 py-3 text-slate-600">{meaning}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       </Section>
 
-      <Section title="Get started">
-        <Link to="/signup" className="rounded-md bg-brand-600 px-5 py-3 font-medium text-white hover:bg-brand-700">
-          Get your API key
+      <CtaPanel title="Get started">
+        <Link to="/signup" className="btn-primary">
+          Get your API key <IconArrowRight size={18} />
         </Link>
-      </Section>
+      </CtaPanel>
     </>
   );
 }

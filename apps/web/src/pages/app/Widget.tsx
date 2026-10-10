@@ -97,7 +97,7 @@ export function Widget() {
                 <select
                   value={key.id}
                   onChange={(e) => setSelected(e.target.value)}
-                  className="rounded-md border border-slate-300 px-2 py-1.5 font-mono text-xs"
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 font-mono text-xs shadow-sm"
                 >
                   {publishable.map((k) => (
                     <option key={k.id} value={k.id}>

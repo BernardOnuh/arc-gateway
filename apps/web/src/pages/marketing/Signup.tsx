@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GatewayError, type RegisterPartnerResult } from "@arc/gateway-sdk";
+import { AuthPanel } from "../../components/AuthShell";
 import { CopyButton } from "../../components/CopyButton";
+import { buttonClass, inputClass } from "../../components/dashboard/ui";
 import { useAuth } from "../../lib/auth";
 import { describeError, publicClient } from "../../lib/gateway";
 import { formatBps } from "../../lib/format";
@@ -16,8 +18,18 @@ function signupError(err: unknown): string {
 export function Signup() {
   const [result, setResult] = useState<RegisterPartnerResult | null>(null);
   return (
-    <div className="mx-auto max-w-xl px-4 py-14">
-      {result ? <KeyReveal result={result} /> : <SignupForm onCreated={setResult} />}
+    <div className="bg-slate-50">
+      <div className="mx-auto grid max-w-6xl gap-0 px-4 py-12 lg:grid-cols-2 lg:py-16">
+        <div className="overflow-hidden rounded-t-3xl lg:rounded-l-3xl lg:rounded-tr-none [&>div]:h-full">
+          <AuthPanel
+            title="Live in minutes, not weeks."
+            points={["Secret key issued instantly", "No sales call, no monthly minimum", "Earn a fee on every transaction"]}
+          />
+        </div>
+        <div className="card rounded-3xl p-7 sm:p-10 lg:rounded-l-none">
+          {result ? <KeyReveal result={result} /> : <SignupForm onCreated={setResult} />}
+        </div>
+      </div>
     </div>
   );
 }
@@ -49,9 +61,9 @@ function SignupForm({ onCreated }: { onCreated: (r: RegisterPartnerResult) => vo
 
   return (
     <>
-      <h1 className="text-3xl font-semibold tracking-tight">Get your API key</h1>
+      <h1 className="text-3xl font-semibold">Get your API key</h1>
       <p className="mt-2 text-slate-600">Create a partner account. Your key is issued instantly.</p>
-      <form onSubmit={onSubmit} className="mt-8 space-y-5 rounded-lg border border-slate-200 p-6">
+      <form onSubmit={onSubmit} className="mt-8 space-y-5">
         <div>
           <label htmlFor="partner-name" className="block text-sm font-medium text-slate-700">
             Business name
@@ -62,7 +74,7 @@ function SignupForm({ onCreated }: { onCreated: (r: RegisterPartnerResult) => vo
             maxLength={120}
             value={partnerName}
             onChange={(e) => setPartnerName(e.target.value)}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+            className={`mt-1.5 ${inputClass}`}
           />
         </div>
         <div>
@@ -75,7 +87,7 @@ function SignupForm({ onCreated }: { onCreated: (r: RegisterPartnerResult) => vo
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+            className={`mt-1.5 ${inputClass}`}
           />
         </div>
         {error && (
@@ -86,7 +98,7 @@ function SignupForm({ onCreated }: { onCreated: (r: RegisterPartnerResult) => vo
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+          className={`w-full ${buttonClass}`}
         >
           {pending ? "Creating…" : "Create account"}
         </button>
@@ -123,20 +135,20 @@ function KeyReveal({ result }: { result: RegisterPartnerResult }) {
 
   return (
     <>
-      <h1 className="text-3xl font-semibold tracking-tight">Your API key</h1>
-      <div role="note" className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+      <h1 className="text-3xl font-semibold">Your API key</h1>
+      <div role="note" className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
         <p className="font-medium">Store this key now. It is shown only once.</p>
         <p className="mt-1">
           We keep only a hash, so we can't show it again or recover it. Put it in your password manager or secrets
           store before you continue.
         </p>
       </div>
-      <div className="mt-6 rounded-lg border border-slate-200 p-4">
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-medium text-slate-700">Secret key</span>
           <CopyButton text={result.apiKey} label="Copy key" onCopied={() => setStored(true)} />
         </div>
-        <code data-testid="api-key" className="mt-2 block break-all rounded bg-slate-50 p-3 font-mono text-sm">
+        <code data-testid="api-key" className="mt-2 block break-all rounded-lg bg-ink-900 p-3 font-mono text-sm text-accent-300">
           {result.apiKey}
         </code>
         <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
@@ -164,7 +176,7 @@ function KeyReveal({ result }: { result: RegisterPartnerResult }) {
         type="button"
         onClick={continueToDashboard}
         disabled={!stored || pending}
-        className="mt-5 w-full rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+        className={`mt-5 w-full ${buttonClass}`}
       >
         {pending ? "Opening dashboard…" : "Continue to dashboard"}
       </button>
