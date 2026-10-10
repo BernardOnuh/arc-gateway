@@ -63,15 +63,15 @@ services:
       pnpm install --frozen-lockfile &&
       pnpm --filter stableflow-sdk build &&
       pnpm --filter @arc/widget build &&
-      VITE_GATEWAY_URL=https://$API_HOST pnpm --filter @arc/web build &&
+      pnpm --filter @arc/web build &&
       cp -r packages/arc-widget/dist/standalone apps/web/dist/widget
     staticPublishPath: ./apps/web/dist
     envVars:
-      - key: API_HOST
-        fromService:
-          type: web
-          name: arc-gateway-api
-          property: host
+      # The API's PUBLIC https URL, baked into the site at build time. (fromService
+      # `host` is the internal hostname, which browsers can't reach.) Change it if
+      # Render suffixes the API's name or you add a custom domain, then redeploy.
+      - key: VITE_GATEWAY_URL
+        value: https://arc-gateway-api.onrender.com
     routes:
       - type: rewrite
         source: /*
