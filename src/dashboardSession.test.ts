@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { buildApp } from "./server.js";
 import { db } from "./db/index.js";
@@ -61,6 +61,12 @@ describe("dashboard session cookie", () => {
     const main = await makePartner("sess-main");
     secret = main.rawKey;
     partnerId = main.partnerId;
+  });
+
+  // Sign-in is limited to 10/min per IP; this file signs in more often than that.
+  beforeEach(async () => {
+    const rl = await app.redis.keys("gateway-rl*");
+    if (rl.length) await app.redis.del(...rl);
   });
 
   afterAll(async () => {
@@ -126,6 +132,7 @@ describe("dashboard session cookie", () => {
     expect(dash.headers["access-control-allow-origin"]).toBe(DASH);
     expect(dash.headers["access-control-allow-credentials"]).toBe("true");
     expect(String(dash.headers["access-control-allow-headers"])).toContain("x-arc-dashboard");
+    expect(String(dash.headers["access-control-allow-methods"])).toContain("PUT");
 
     const evil = await app.inject({
       method: "OPTIONS",

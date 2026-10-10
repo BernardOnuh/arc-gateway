@@ -2,6 +2,7 @@ import { GatewayError } from "./errors.js";
 import type {
   ApiKeySummary,
   ChainInfo,
+  CheckoutBranding,
   CreatePaymentParams,
   CreatePublishableKeyParams,
   Payment,
@@ -156,6 +157,15 @@ export class GatewayClient {
   /** Sets the ARC address that receives checkout payments. */
   setPayoutAddress(payoutAddress: string, apiKey?: string): Promise<{ payoutAddress: string }> {
     return this.request("POST", "/v1/partners/me/payout", { body: { payoutAddress }, apiKey });
+  }
+
+  getBranding(apiKey?: string): Promise<CheckoutBranding> {
+    return this.request("GET", "/v1/partners/me/branding", { apiKey });
+  }
+
+  /** Replaces the checkout branding; applies to every checkout immediately. */
+  updateBranding(branding: CheckoutBranding, apiKey?: string): Promise<CheckoutBranding> {
+    return this.request("PUT", "/v1/partners/me/branding", { body: branding, apiKey });
   }
 
   /** Creates a checkout for a USD amount; hand paymentId to the checkout widget. */

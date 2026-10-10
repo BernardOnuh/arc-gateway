@@ -54,9 +54,42 @@ export interface PaymentLeg {
   };
 }
 
+export type CheckoutTextKey =
+  | "title"
+  | "connectButton"
+  | "connectHint"
+  | "payWithLabel"
+  | "payButton"
+  | "totalLabel"
+  | "remainingLabel"
+  | "keepOpen"
+  | "emptyBalances"
+  | "successTitle"
+  | "successMessage"
+  | "footer";
+
+export type CheckoutTexts = Partial<Record<CheckoutTextKey, string>>;
+
+/** Saved per business on the gateway (PUT /v1/partners/me/branding) and shipped with each payment. */
+export interface CheckoutBranding {
+  displayName?: string | null;
+  /** Data URL (png, jpeg, webp, svg) or https URL. */
+  logo?: string | null;
+  accentColor?: string;
+  theme?: "light" | "dark" | "auto";
+  radius?: number;
+  showNetworkDetails?: boolean;
+  /** Placeholders: {amount}, {merchant}. An empty footer hides it. */
+  texts?: CheckoutTexts;
+}
+
+/** Screens the demo can be pinned to, for previews. */
+export type CheckoutPreviewState = "connect" | "select" | "paying" | "partial" | "done" | "expired" | "invalid";
+
 export interface Payment {
   paymentId: string;
   merchantName: string;
+  branding?: CheckoutBranding;
   amountCents: number;
   currency: string;
   description: string | null;
@@ -96,8 +129,15 @@ export interface ArcCheckoutProps extends WidgetAppearance {
    * Default: Circle App Kit swap signed by the customer's wallet (loaded on demand).
    */
   executeLeg?: (ctx: ExecuteLegContext) => Promise<string>;
-  /** Show that settlement happens on ARC, with explorer links. Default false. */
+  /** Show that settlement happens on ARC, with explorer links. Default: the saved branding, else false. */
   showNetworkDetails?: boolean;
+  /**
+   * Branding overrides on top of the business's saved branding (which the
+   * payment carries). Explicit props like accentColor win over both.
+   */
+  branding?: CheckoutBranding;
+  /** Demo only: show a specific screen (for design previews). */
+  previewState?: CheckoutPreviewState;
   /** Max slippage per leg in basis points. Default 50. */
   slippageBps?: number;
   /** Payment status poll interval. Default 3000 ms. */

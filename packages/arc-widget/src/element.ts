@@ -155,7 +155,7 @@ export class ArcCheckoutElement extends HTMLElement {
       accentColor: this.getAttribute("accent-color") ?? undefined,
       radius: radius === null || Number.isNaN(Number(radius)) ? undefined : Number(radius),
       title: this.getAttribute("title") ?? undefined,
-      showNetworkDetails: this.hasAttribute("show-network-details"),
+      showNetworkDetails: this.hasAttribute("show-network-details") ? true : undefined,
       onPaid: (p) => this.emit("arc-paid", p),
       onStatus: (p) => this.emit("arc-status", p),
       onError: (e) => this.emit("arc-error", e),

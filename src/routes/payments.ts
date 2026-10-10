@@ -173,14 +173,20 @@ function legView({ leg, quote, intent }: LegView) {
 }
 
 async function paymentView(payment: PaymentRow, legs: LegView[]) {
-  const [partner] = await db.select({ name: partners.name }).from(partners).where(eq(partners.id, payment.partnerId));
+  const [partner] = await db
+    .select({ name: partners.name, branding: partners.branding })
+    .from(partners)
+    .where(eq(partners.id, payment.partnerId));
+  const branding = (partner?.branding ?? {}) as { displayName?: string | null };
   const settled = legs.filter((l) => l.intent?.status === "EXECUTED_ON_ARC").reduce((s, l) => s + l.leg.valueCents, 0);
   const pending = legs
     .filter((l) => l.intent && !TERMINAL.has(l.intent.status))
     .reduce((s, l) => s + l.leg.valueCents, 0);
   return {
     paymentId: payment.id,
-    merchantName: partner?.name ?? "",
+    merchantName: branding.displayName || partner?.name || "",
+    /** The partner's checkout branding (logo, colors, texts); public by design. */
+    branding: partner?.branding ?? {},
     amountCents: payment.amountCents,
     currency: payment.currency,
     description: payment.description,

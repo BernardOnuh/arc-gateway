@@ -96,6 +96,7 @@ export const widgetCss = `
 export const checkoutCss = `
 .arcc-merchant{display:flex;align-items:center;gap:10px;margin:2px 2px 16px}
 .arcc-avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:12px;background:var(--arcw-accent);color:var(--arcw-accent-fg);font-weight:600;font-size:15px;flex:none}
+.arcc-logo{width:40px;height:40px;border-radius:12px;object-fit:contain;background:var(--arcw-soft);flex:none}
 .arcc-merchant small{display:block;font-size:12px;color:var(--arcw-muted)}
 .arcc-merchant strong{display:block;font-size:15px;font-weight:600}
 .arcc-total{text-align:center;padding:18px 12px 20px;border-radius:var(--arcw-r-in);background:var(--arcw-soft);margin-bottom:14px}

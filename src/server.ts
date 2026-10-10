@@ -19,6 +19,7 @@ import { customerAccountRoutes } from "./routes/customerAccounts.js";
 import { ledgerRoutes } from "./routes/ledger.js";
 import { quoteRoutes } from "./routes/quotes.js";
 import { paymentRoutes } from "./routes/payments.js";
+import { brandingRoutes } from "./routes/branding.js";
 import { intentRoutes } from "./routes/intents.js";
 
 export type App = Awaited<ReturnType<typeof buildApp>>;
@@ -129,7 +130,7 @@ export async function buildApp() {
       cb(null, {
         origin: widget ? true : dashboardOrigins,
         credentials: !widget && !wildcard,
-        methods: ["GET", "POST"],
+        methods: ["GET", "POST", "PUT"],
         allowedHeaders: ["authorization", "content-type", DASHBOARD_HEADER],
         maxAge: 600,
       });
@@ -150,6 +151,7 @@ export async function buildApp() {
   await ledgerRoutes(app);
   await quoteRoutes(app);
   await paymentRoutes(app);
+  await brandingRoutes(app);
   await intentRoutes(app);
 
   return app;

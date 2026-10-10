@@ -6,7 +6,9 @@ import { formatUnits } from "../units.js";
 import { appKitExecute } from "./execute.js";
 import type {
   ArcCheckoutProps,
+  CheckoutBranding,
   CheckoutChain,
+  CheckoutTextKey,
   Eip1193Provider,
   Holding,
   Payment,
@@ -14,6 +16,26 @@ import type {
   PriceItem,
 } from "./types.js";
 import { amountForCents, connectWallet, injectedProvider, isUserRejection, readHoldings } from "./wallet.js";
+
+/** Defaults for every customer-facing string; merchants override any of them. */
+export const DEFAULT_CHECKOUT_TEXTS: Record<CheckoutTextKey, string> = {
+  title: "Pay",
+  connectButton: "Connect wallet",
+  connectHint: "Pay with tokens you already hold, from any of your networks.",
+  payWithLabel: "Pay with",
+  payButton: "Pay {amount}",
+  totalLabel: "Total",
+  remainingLabel: "Remaining",
+  keepOpen: "Keep this window open until the payment completes.",
+  emptyBalances: "No supported tokens in this wallet. Add funds or connect another wallet.",
+  successTitle: "Payment complete",
+  successMessage: "{amount} paid to {merchant}",
+  footer: "Secured by ARC Gateway",
+};
+
+/** Only data:image/* or https URLs reach an <img src>. */
+const safeLogo = (logo: string | null | undefined) =>
+  logo && (/^data:image\/(png|jpeg|webp|svg\+xml);base64,/.test(logo) || /^https:\/\//.test(logo)) ? logo : null;
 
 const usd = (cents: number) =>
   `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -85,18 +107,34 @@ export function ArcCheckout(props: ArcCheckoutProps) {
     showNetworkDetails = false,
   } = props;
   const demo = !paymentId && props.demo ? props.demo : null;
+  const previewState = demo ? props.previewState : undefined;
   const api = useMemo(() => createApi(baseUrl, publishableKey), [baseUrl, publishableKey]);
   const cb = useRef(props);
   cb.current = props;
 
-  const accent = normalizeAccent(props.accentColor);
+  const [payment, setPayment] = useState<Payment | null>(null);
+
+  // Branding: explicit props > branding prop > the business's saved branding > defaults.
+  const brand: CheckoutBranding = { ...(payment?.branding ?? {}), ...(props.branding ?? {}) };
+  const accent = normalizeAccent(props.accentColor ?? brand.accentColor);
+  const radius = props.radius ?? brand.radius;
+  const themeName = props.theme ?? brand.theme ?? theme;
+  const networkDetails = props.showNetworkDetails ?? brand.showNetworkDetails ?? showNetworkDetails;
+  const merchant = props.branding?.displayName || payment?.merchantName || "";
+  const logo = safeLogo(brand.logo);
+  const texts = { ...DEFAULT_CHECKOUT_TEXTS };
+  for (const [k, v] of Object.entries({ ...(payment?.branding?.texts ?? {}), ...(props.branding?.texts ?? {}) })) {
+    // Empty means "use the default", except the footer, where empty hides it.
+    if (typeof v === "string" && (v.trim() || k === "footer")) texts[k as CheckoutTextKey] = v;
+  }
+  if (title) texts.title = title;
+  const t = (key: CheckoutTextKey, amountCents?: number) =>
+    texts[key].replaceAll("{merchant}", merchant).replaceAll("{amount}", amountCents === undefined ? "" : usd(amountCents));
   const rootStyle = {
     "--arcw-accent": accent,
     "--arcw-accent-fg": accentForeground(accent),
-    "--arcw-r": `${props.radius === undefined ? 20 : Math.min(32, Math.max(0, props.radius))}px`,
+    "--arcw-r": `${radius === undefined ? 20 : Math.min(32, Math.max(0, radius))}px`,
   } as CSSProperties;
-
-  const [payment, setPayment] = useState<Payment | null>(null);
   const [chains, setChains] = useState<CheckoutChain[]>([]);
   const [prices, setPrices] = useState<PriceItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -135,6 +173,12 @@ export function ArcCheckout(props: ArcCheckoutProps) {
         legs: [],
       });
       setView({ name: "connect" });
+      setAccount(null);
+      setHoldings(null);
+      setAlloc({});
+      setError(null);
+      setLoadError(null);
+      if (previewState) applyPreview(previewState, demo);
       return;
     }
     if (!paymentId) {
@@ -154,7 +198,100 @@ export function ArcCheckout(props: ArcCheckoutProps) {
       cancelled = true;
     };
     // demo object identity changes per render in most hosts; key on its values.
-  }, [api, paymentId, demo?.amountCents, demo?.merchantName, demo?.description]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [api, paymentId, demo?.amountCents, demo?.merchantName, demo?.description, previewState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Demo only: jump straight to a screen with plausible data. */
+  function applyPreview(state: NonNullable<typeof previewState>, d: NonNullable<typeof demo>) {
+    const hs = demoHoldings();
+    const account = "0x7a3f00000000000000000000000000000000e21a";
+    const base: Payment = {
+      paymentId: "demo",
+      merchantName: d.merchantName,
+      amountCents: d.amountCents,
+      currency: "USD",
+      description: d.description ?? null,
+      reference: "order_1042",
+      status: "open",
+      paidCents: 0,
+      pendingCents: 0,
+      remainingCents: d.amountCents,
+      destChainId: 5042,
+      expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+      paidAt: null,
+      legs: [],
+    };
+    const split = (need: number) => {
+      const out: Record<string, number> = {};
+      let left = need;
+      for (const h of hs) {
+        if (left <= 0) break;
+        const give = Math.min(h.maxCents, left);
+        if (give > 0) {
+          out[h.key] = give;
+          left -= give;
+        }
+      }
+      return out;
+    };
+    if (state === "invalid") {
+      setLoadError("This payment link isn't valid.");
+      return;
+    }
+    if (state === "expired") {
+      setPayment({ ...base, status: "expired" });
+      return;
+    }
+    if (state === "connect") return;
+    setAccount(account);
+    setHoldings(hs);
+    if (state === "select") {
+      setAlloc(split(d.amountCents));
+      setView({ name: "select" });
+    } else if (state === "partial") {
+      const paidCents = Math.round(d.amountCents * 0.6);
+      setPayment({ ...base, status: "partially_paid", paidCents, remainingCents: d.amountCents - paidCents });
+      setError(`We received ${usd(paidCents)}. Choose how to pay the remaining ${usd(d.amountCents - paidCents)}.`);
+      setView({ name: "select" });
+    } else if (state === "paying") {
+      const parts = split(d.amountCents);
+      const steps: Step[] = hs
+        .filter((h) => parts[h.key])
+        .map((h, i) => ({
+          key: h.key,
+          label: `${h.token.symbol} on ${h.chainName}`,
+          cents: parts[h.key],
+          state: i === 0 ? "done" : i === 1 ? "active" : "waiting",
+          detail: i === 0 ? "Paid" : i === 1 ? "Confirm in your wallet" : "Waiting",
+        }));
+      setView({ name: "paying", steps });
+    } else if (state === "done") {
+      const parts = split(d.amountCents);
+      setChains(DEMO_HOLDINGS.map((x) => ({ id: x.chainId, name: x.chainName, isArc: false, testnet: false, explorerUrl: "" })));
+      setPayment({
+        ...base,
+        status: "paid",
+        paidCents: d.amountCents,
+        remainingCents: 0,
+        paidAt: new Date().toISOString(),
+        legs: hs
+          .filter((h) => parts[h.key])
+          .map((h, i) => ({
+            legId: `demo-${i}`,
+            quoteId: `demo-${i}`,
+            originChainId: h.chainId,
+            token: { symbol: h.token.symbol, address: h.token.address, decimals: h.token.decimals, isNative: h.token.isNative },
+            amountIn: amountForCents(h, parts[h.key], slippageBps).toString(),
+            valueCents: parts[h.key],
+            payer: account,
+            status: "EXECUTED_ON_ARC" as const,
+            originTx: null,
+            destTx: `0x${"ab".repeat(32)}`,
+            execution: { fromChain: null, toChain: null, tokenIn: h.token.symbol, tokenOut: "USDC", amountIn: "", recipientAddress: "", slippageBps },
+          })),
+      });
+      setView({ name: "done" });
+    }
+  }
 
   const need = payment?.remainingCents ?? 0;
   const covered = Object.values(alloc).reduce((s, c) => s + c, 0);
@@ -354,10 +491,8 @@ export function ArcCheckout(props: ArcCheckoutProps) {
         <div className="arcc-check">
           <Check size={30} />
         </div>
-        <h3>Payment complete</h3>
-        <p>
-          {usd(payment.amountCents)} paid to {payment.merchantName}
-        </p>
+        <h3>{t("successTitle", payment.amountCents)}</h3>
+        <p>{t("successMessage", payment.amountCents)}</p>
         <div className="arcc-receipt">
           {payment.description && (
             <div>
@@ -381,7 +516,7 @@ export function ArcCheckout(props: ArcCheckoutProps) {
                 {usd(l.valueCents)}
               </div>
             ))}
-          {showNetworkDetails && (
+          {networkDetails && (
             <>
               <div>
                 <span>Settled as</span>USDC on ARC
@@ -411,7 +546,7 @@ export function ArcCheckout(props: ArcCheckoutProps) {
   } else if (payment.status === "expired") {
     body = (
       <p className="arcw-error" role="alert">
-        This payment expired. Go back to {payment.merchantName} to start again.
+        This payment expired. Go back to {merchant} to start again.
       </p>
     );
   } else if (view.name === "connect") {
@@ -428,10 +563,10 @@ export function ArcCheckout(props: ArcCheckoutProps) {
               <Spinner /> Connecting…
             </>
           ) : (
-            "Connect wallet"
+            t("connectButton")
           )}
         </button>
-        <p className="arcw-note">Pay with tokens you already hold, from any of your networks.</p>
+        {texts.connectHint.trim() && <p className="arcw-note">{t("connectHint")}</p>}
       </>
     );
   } else if (view.name === "select") {
@@ -439,7 +574,7 @@ export function ArcCheckout(props: ArcCheckoutProps) {
     body = (
       <>
         <div className="arcc-section">
-          <span>Pay with</span>
+          <span>{t("payWithLabel")}</span>
           {account && <span className="arcc-account">{shortAddr(account)}</span>}
         </div>
         {holdings === null ? (
@@ -447,9 +582,7 @@ export function ArcCheckout(props: ArcCheckoutProps) {
             <Spinner /> Checking your balances…
           </p>
         ) : holdings.length === 0 ? (
-          <div className="arcc-empty">
-            No supported tokens in this wallet. Add funds or connect another wallet.
-          </div>
+          <div className="arcc-empty">{t("emptyBalances")}</div>
         ) : (
           <ul className="arcc-list" aria-label="Your balances">
             {holdings.map((h) => {
@@ -514,7 +647,7 @@ export function ArcCheckout(props: ArcCheckoutProps) {
           </p>
         )}
         <button type="button" className="arcw-btn" disabled={!full || busy} onClick={pay}>
-          Pay {usd(need)}
+          {t("payButton", need)}
         </button>
       </>
     );
@@ -536,13 +669,13 @@ export function ArcCheckout(props: ArcCheckoutProps) {
             </li>
           ))}
         </ul>
-        <p className="arcw-note">Keep this window open until the payment completes.</p>
+        {texts.keepOpen.trim() && <p className="arcw-note">{t("keepOpen")}</p>}
       </div>
     );
   }
 
   return (
-    <div className="arcw" data-theme={theme} style={rootStyle} data-testid="arc-checkout">
+    <div className="arcw" data-theme={themeName} style={rootStyle} data-testid="arc-checkout">
       <style>
         {widgetCss}
         {checkoutCss}
@@ -550,17 +683,21 @@ export function ArcCheckout(props: ArcCheckoutProps) {
       {payment && (
         <>
           <div className="arcc-merchant">
-            <span className="arcc-avatar" aria-hidden>
-              {payment.merchantName.slice(0, 1).toUpperCase()}
-            </span>
+            {logo ? (
+              <img className="arcc-logo" src={logo} alt="" />
+            ) : (
+              <span className="arcc-avatar" aria-hidden>
+                {merchant.slice(0, 1).toUpperCase()}
+              </span>
+            )}
             <span>
-              <small>{title ?? "Pay"}</small>
-              <strong>{payment.merchantName}</strong>
+              <small>{t("title")}</small>
+              <strong>{merchant}</strong>
             </span>
           </div>
           {view.name !== "done" && payment.status !== "paid" && (
             <div className="arcc-total">
-              <small>{payment.paidCents > 0 ? "Remaining" : "Total"}</small>
+              <small>{payment.paidCents > 0 ? t("remainingLabel") : t("totalLabel")}</small>
               <strong>{usd(payment.paidCents > 0 ? payment.remainingCents : payment.amountCents)}</strong>
               {payment.description && <p>{payment.description}</p>}
             </div>
@@ -568,9 +705,7 @@ export function ArcCheckout(props: ArcCheckoutProps) {
         </>
       )}
       {body}
-      <p className="arcw-foot">
-        Secured by <b>ARC Gateway</b>
-      </p>
+      {texts.footer.trim() && <p className="arcw-foot">{t("footer")}</p>}
     </div>
   );
 }

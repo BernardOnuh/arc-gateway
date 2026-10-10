@@ -3,7 +3,6 @@ import { ArcCheckout } from "@arc/widget";
 import { SkyBackdrop } from "../components/art";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { GATEWAY_URL } from "../lib/env";
-import { useTheme } from "../lib/theme";
 
 /**
  * Hosted checkout: /checkout/:paymentId?key=pk_live_…
@@ -13,7 +12,6 @@ export function Checkout() {
   const { paymentId } = useParams();
   const [params] = useSearchParams();
   const key = params.get("key");
-  const { theme } = useTheme();
 
   return (
     <div className="relative flex min-h-screen flex-col items-center px-4 py-16">
@@ -23,7 +21,8 @@ export function Checkout() {
       </div>
       <div className="relative w-full max-w-[420px]">
         {key && paymentId ? (
-          <ArcCheckout publishableKey={key} baseUrl={GATEWAY_URL} paymentId={paymentId} theme={theme} />
+          // The merchant's saved branding (theme included) comes with the payment.
+          <ArcCheckout publishableKey={key} baseUrl={GATEWAY_URL} paymentId={paymentId} />
         ) : (
           <div className="glass rounded-4xl bg-white/80 p-8 text-center text-ink-700">
             This checkout link is incomplete. Ask the merchant for a new one.

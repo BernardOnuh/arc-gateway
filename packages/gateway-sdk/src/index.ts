@@ -12,6 +12,8 @@ export type {
   Customer,
   CustomerAccount,
   CustomerSession,
+  CheckoutBranding,
+  CheckoutTextKey,
   CreatePaymentParams,
   DashboardCredentials,
   Payment,

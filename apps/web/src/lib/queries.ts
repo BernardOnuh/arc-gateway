@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   ChainInfo,
+  CheckoutBranding,
   CreatePaymentParams,
   CreateCustomerParams,
   ListIntentsParams,
@@ -157,5 +158,19 @@ export function useSetPayoutAddress() {
   return useMutation({
     mutationFn: (address: string) => client.setPayoutAddress(address),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["me", scope] }),
+  });
+}
+
+export function useBranding() {
+  const { client, scope } = useGateway();
+  return useQuery({ queryKey: ["branding", scope], queryFn: () => client.getBranding() });
+}
+
+export function useSaveBranding() {
+  const { client, scope } = useGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (branding: CheckoutBranding) => client.updateBranding(branding),
+    onSuccess: (saved) => queryClient.setQueryData(["branding", scope], saved),
   });
 }

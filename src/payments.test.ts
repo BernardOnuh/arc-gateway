@@ -198,6 +198,39 @@ describe("checkout payments", () => {
     expect(res.json().total).toBeGreaterThanOrEqual(5);
   });
 
+  it("saves branding and ships it with every payment", async () => {
+    const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    const put = (body: unknown, key = secret) =>
+      app.inject({ method: "PUT", url: "/v1/partners/me/branding", headers: as(key), body });
+
+    expect((await put({ logo: "data:text/html;base64,PHNjcmlwdD4=" })).statusCode).toBe(400);
+    expect((await put({ accentColor: "red" })).statusCode).toBe(400);
+    // Unknown text keys are dropped, never stored.
+    expect((await put({ texts: { notAKey: "x" } })).json().texts).toEqual({});
+    expect((await put({ texts: { payButton: "x".repeat(141) } })).statusCode).toBe(400);
+    // Publishable keys can't change branding.
+    expect((await app.inject({ method: "PUT", url: "/v1/partners/me/branding", headers: as(pk, SHOP), body: {} })).statusCode).toBe(403);
+
+    const saved = await put({
+      displayName: "Acme Store",
+      logo: LOGO,
+      accentColor: "#4f46e5",
+      theme: "dark",
+      radius: 12,
+      showNetworkDetails: true,
+      texts: { payButton: "Complete purchase · {amount}", footer: "" },
+    });
+    expect(saved.statusCode).toBe(200);
+    const got = await app.inject({ method: "GET", url: "/v1/partners/me/branding", headers: as(secret) });
+    expect(got.json()).toMatchObject({ displayName: "Acme Store", logo: LOGO, theme: "dark", texts: { payButton: "Complete purchase · {amount}", footer: "" } });
+
+    const payment = (await createPayment({ amount: "4.00" })).json();
+    expect(payment.merchantName).toBe("Acme Store");
+    expect(payment.branding).toMatchObject({ logo: LOGO, accentColor: "#4f46e5", radius: 12 });
+    const viaPk = (await getPayment(payment.paymentId)).json();
+    expect(viaPk.branding.texts.payButton).toBe("Complete purchase · {amount}");
+  });
+
   it("answers checkout CORS from any site", async () => {
     const res = await app.inject({
       method: "OPTIONS",

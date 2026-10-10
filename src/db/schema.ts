@@ -22,6 +22,8 @@ export const partners = pgTable(
     passwordHash: text("password_hash"),
     /** ARC address that receives checkout payments (USDC). Required before creating payments. */
     payoutAddress: text("payout_address"),
+    /** Checkout branding (logo, colors, texts); see routes/branding.ts. Public via payments. */
+    branding: jsonb("branding"),
     feeBps: integer("fee_bps").notNull(),
     rateLimitPerMin: integer("rate_limit_per_min").notNull(),
     active: boolean("active").notNull().default(true),

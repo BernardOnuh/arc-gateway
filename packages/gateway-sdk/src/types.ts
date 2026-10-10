@@ -309,6 +309,7 @@ export interface PaymentLeg {
 export interface Payment {
   paymentId: string;
   merchantName: string;
+  branding: CheckoutBranding;
   amountCents: number;
   currency: string;
   description: string | null;
@@ -324,4 +325,30 @@ export interface Payment {
   paidAt: string | null;
   createdAt: string;
   legs: PaymentLeg[];
+}
+
+export type CheckoutTextKey =
+  | "title"
+  | "connectButton"
+  | "connectHint"
+  | "payWithLabel"
+  | "payButton"
+  | "totalLabel"
+  | "remainingLabel"
+  | "keepOpen"
+  | "emptyBalances"
+  | "successTitle"
+  | "successMessage"
+  | "footer";
+
+/** Checkout branding; texts accept {amount} and {merchant}. */
+export interface CheckoutBranding {
+  displayName?: string | null;
+  /** data:image/(png|jpeg|webp|svg+xml);base64,… under 300 KB. */
+  logo?: string | null;
+  accentColor?: string;
+  theme?: "light" | "dark" | "auto";
+  radius?: number;
+  showNetworkDetails?: boolean;
+  texts?: Partial<Record<CheckoutTextKey, string>>;
 }

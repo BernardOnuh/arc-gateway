@@ -1,8 +1,12 @@
 export { ArcSwapWidget, WidgetApiError, accentForeground, normalizeAccent } from "./ArcSwapWidget.js";
-export { ArcCheckout } from "./checkout/ArcCheckout.js";
+export { ArcCheckout, DEFAULT_CHECKOUT_TEXTS } from "./checkout/ArcCheckout.js";
 export { appKitExecute } from "./checkout/execute.js";
 export type {
   ArcCheckoutProps,
+  CheckoutBranding,
+  CheckoutPreviewState,
+  CheckoutTextKey,
+  CheckoutTexts,
   Eip1193Provider,
   ExecuteLegContext,
   Holding,

@@ -238,6 +238,85 @@ describe("ArcCheckout", () => {
   }, 10000);
 });
 
+describe("branding", () => {
+  const LOGO = "data:image/png;base64,iVBORw0KGgo=";
+
+  it("uses the business's saved branding from the payment: logo, name, colors and every text", async () => {
+    const user = userEvent.setup();
+    const { provider } = setup({ amountCents: 500 });
+    const realFetch = (globalThis.fetch as any).getMockImplementation();
+    (globalThis.fetch as any).mockImplementation(async (input: any, init: any) => {
+      const res: Response = await realFetch(input, init);
+      if (!String(input).endsWith("/v1/payments/p-1")) return res;
+      const body = await res.json();
+      return new Response(
+        JSON.stringify({
+          ...body,
+          merchantName: "Acme Store",
+          branding: {
+            logo: LOGO,
+            accentColor: "#e11d48",
+            theme: "dark",
+            radius: 6,
+            texts: { title: "Checkout for", connectButton: "Link my wallet", payButton: "Buy now for {amount}", successTitle: "Thanks!", successMessage: "{merchant} got {amount}", footer: "" },
+          },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    });
+    render(<ArcCheckout publishableKey={PK} baseUrl="http://gw.test" paymentId="p-1" provider={provider} executeLeg={async () => TX(1)} pollIntervalMs={5} />);
+
+    expect(await screen.findByText("Acme Store")).toBeInTheDocument();
+    expect(screen.getByText("Checkout for")).toBeInTheDocument();
+    const root = screen.getByTestId("arc-checkout");
+    expect(root).toHaveAttribute("data-theme", "dark");
+    expect(root.style.getPropertyValue("--arcw-accent")).toBe("#e11d48");
+    expect(root.querySelector("img.arcc-logo")).toHaveAttribute("src", LOGO);
+    expect(screen.queryByText(/Secured by/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Link my wallet" }));
+    const list = await screen.findByRole("list", { name: "Your balances" });
+    await user.click(within(list).getByLabelText(/USDC/));
+    await user.click(screen.getByRole("button", { name: "Buy now for $5.00" }));
+    expect(await screen.findByText("Thanks!")).toBeInTheDocument();
+    expect(screen.getByText("Acme Store got $5.00")).toBeInTheDocument();
+  });
+
+  it("lets props override saved branding and refuses unsafe logo URLs", async () => {
+    setup();
+    render(
+      <ArcCheckout
+        publishableKey={PK}
+        demo={{ amountCents: 1000, merchantName: "Demo Store" }}
+        accentColor="#059669"
+        branding={{ logo: "javascript:alert(1)", displayName: "Renamed", texts: { connectButton: "" } }}
+      />
+    );
+    expect(await screen.findByText("Renamed")).toBeInTheDocument();
+    expect(screen.getByTestId("arc-checkout").querySelector("img")).toBeNull();
+    // Empty text falls back to the default.
+    expect(screen.getByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
+    expect(screen.getByTestId("arc-checkout").style.getPropertyValue("--arcw-accent")).toBe("#059669");
+  });
+
+  it("pins the demo to any screen for previews", async () => {
+    const demo = { amountCents: 1000, merchantName: "Demo Store" };
+    const { rerender } = render(<ArcCheckout publishableKey={PK} demo={demo} previewState="select" />);
+    expect(await screen.findByRole("button", { name: "Pay $10.00" })).toBeEnabled();
+    rerender(<ArcCheckout publishableKey={PK} demo={demo} previewState="paying" />);
+    expect(await screen.findByText("Confirm in your wallet")).toBeInTheDocument();
+    rerender(<ArcCheckout publishableKey={PK} demo={demo} previewState="partial" />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("We received $6.00");
+    rerender(<ArcCheckout publishableKey={PK} demo={demo} previewState="done" showNetworkDetails />);
+    expect(await screen.findByText("Payment complete")).toBeInTheDocument();
+    expect(screen.getByText("USDC on ARC")).toBeInTheDocument();
+    rerender(<ArcCheckout publishableKey={PK} demo={demo} previewState="expired" />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("expired");
+    rerender(<ArcCheckout publishableKey={PK} demo={demo} previewState="invalid" />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("isn't valid");
+  });
+});
+
 describe("<arc-checkout>", () => {
   it("renders into a shadow root from attributes", async () => {
     setup();

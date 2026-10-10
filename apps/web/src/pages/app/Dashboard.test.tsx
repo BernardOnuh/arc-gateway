@@ -121,6 +121,8 @@ function signedIn(overrides: Record<string, (url: URL, init: RequestInit) => { s
     switch (route) {
       case "GET /v1/partners/me":
         return { status: 200, body: profile };
+      case "GET /v1/partners/me/branding":
+        return { status: 200, body: {} };
       case "GET /v1/chains":
         return { status: 200, body: chains };
       case "GET /v1/tokens":
@@ -350,28 +352,54 @@ describe("checkout studio", () => {
     signedIn();
     renderApp("/app/widget");
     expect(await screen.findByTestId("arc-checkout")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Pay $10.00" })).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("Create a publishable key");
+    expect(screen.getByRole("button", { name: "Save branding" })).toBeDisabled();
   });
 
-  it("restyles the preview and puts the choices into the snippets", async () => {
+  it("edits name, look and texts live, previews every screen, and saves to the gateway", async () => {
     const user = userEvent.setup();
-    signedIn({ "GET /v1/partners/me/api-keys": () => ({ status: 200, body: { items: [secretKeyRow, pkRow] } }) });
+    const fetchMock = signedIn({
+      "GET /v1/partners/me/api-keys": () => ({ status: 200, body: { items: [secretKeyRow, pkRow] } }),
+      "PUT /v1/partners/me/branding": (_u, init) => ({ status: 200, body: JSON.parse(String(init.body)) }),
+    });
     renderApp("/app/widget");
-    expect(await screen.findByText(/createPayment/)).toBeInTheDocument();
+    const preview = await screen.findByTestId("arc-checkout");
 
+    await user.type(screen.getByLabelText("Display name"), "Acme Store");
+    expect(within(preview).getByText("Acme Store")).toBeInTheDocument();
+    expect(screen.getByText("Unsaved changes")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Look" }));
     await user.click(screen.getByRole("radio", { name: "dark" }));
     await user.click(screen.getByRole("radio", { name: "Indigo" }));
-    await user.click(screen.getByRole("checkbox", { name: /Show network details/ }));
     expect(screen.getByTestId("arc-checkout")).toHaveAttribute("data-theme", "dark");
 
+    await user.click(screen.getByRole("tab", { name: "Text" }));
+    await user.type(screen.getByLabelText("Pay button"), "Buy now · {{amount}");
+    expect(await screen.findByRole("button", { name: "Buy now · $10.00" })).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Footer"), "x");
+    await user.clear(screen.getByLabelText("Footer"));
+    expect(within(screen.getByTestId("arc-checkout")).queryByText(/Secured by/)).not.toBeInTheDocument();
+
+    // Every screen is one click away.
+    await user.click(screen.getByRole("tab", { name: "Complete" }));
+    expect(await screen.findByText("Payment complete")).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Expired" }));
+    expect(await within(screen.getByTestId("arc-checkout")).findByRole("alert")).toHaveTextContent("expired");
+
+    await user.click(screen.getByRole("button", { name: "Save branding" }));
+    expect(await screen.findByText("Saved. Live on every checkout.")).toBeInTheDocument();
+    const put = fetchMock.mock.calls.find(([u, init]) => String(u).endsWith("/v1/partners/me/branding") && init?.method === "PUT")!;
+    expect(JSON.parse(String(put[1]!.body))).toMatchObject({
+      displayName: "Acme Store",
+      theme: "dark",
+      accentColor: "#4f46e5",
+      texts: { payButton: "Buy now · {amount}", footer: "" },
+    });
+
     await user.click(screen.getByRole("tab", { name: "React" }));
-    const react = screen.getByText(/publishableKey="pk_live_widgetwdgt"/);
-    expect(react).toHaveTextContent('accentColor="#4f46e5"');
-    expect(react).toHaveTextContent("showNetworkDetails");
-    expect(react).toHaveTextContent("paymentId={paymentId}");
-    await user.click(screen.getByRole("tab", { name: "Script tag" }));
-    expect(screen.getByText(/<arc-checkout/)).toHaveTextContent('theme="dark"');
+    expect(screen.getByText(/publishableKey="pk_live_widgetwdgt"/)).toHaveTextContent("paymentId={paymentId}");
   });
 });
 

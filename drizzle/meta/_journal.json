@@ -57,6 +57,13 @@
       "when": 1791610117324,
       "tag": "0007_rainy_eternals",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791611226880,
+      "tag": "0008_fresh_marauders",
+      "breakpoints": true
     }
   ]
 }
