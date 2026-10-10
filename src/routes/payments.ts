@@ -205,6 +205,55 @@ async function paymentView(payment: PaymentRow, legs: LegView[]) {
   };
 }
 
+const PRICE_TTL_S = 300;
+const usdcPerSettlement = () => resolveToken(settlementChainId(), "USDC");
+
+/**
+ * Live USD price of a source token: quote a reference amount (about $5 worth)
+ * into USDC on ARC and divide. Stablecoins are priced from a quote too, so
+ * the price includes the route's real cost. Cached in Redis for 5 minutes.
+ * Returns null when the provider has no route for the token (it can't be
+ * paid with, so it's hidden); other failures fall back to the reference price.
+ */
+async function livePriceUsd(
+  redis: FastifyInstance["redis"],
+  t: { chainId: number; symbol: string; address: string; decimals: number }
+): Promise<number | null> {
+  const cacheKey = `gateway:price:${t.chainId}:${t.address}`;
+  const cached = await redis.get(cacheKey);
+  if (cached === "none") return null;
+  if (cached) return Number(cached);
+  const reference = referencePriceUsd(t.symbol) ?? 1;
+  const usdc = usdcPerSettlement();
+  if (!usdc) return reference;
+  const units = 5 / reference;
+  const amountIn = BigInt(Math.max(1, Math.round(units * 10 ** Math.min(t.decimals, 15)))) * 10n ** BigInt(Math.max(0, t.decimals - 15));
+  try {
+    const q = await quoteProvider.getQuote({
+      originChainId: t.chainId,
+      destChainId: settlementChainId(),
+      tokenIn: t.address,
+      tokenOut: usdc.address,
+      amountIn: amountIn.toString(),
+      recipient: "0x000000000000000000000000000000000000dEaD",
+      slippageBps: 0,
+      deadline: Math.floor(Date.now() / 1000) + 300,
+    });
+    const out = Number(BigInt(q.estimatedOut)) / 10 ** usdc.decimals;
+    const inUnits = Number(amountIn) / 10 ** t.decimals;
+    const price = out / inUnits;
+    if (!Number.isFinite(price) || price <= 0) return reference;
+    await redis.set(cacheKey, String(price), "EX", PRICE_TTL_S);
+    return price;
+  } catch (e) {
+    if (e instanceof NoLiquidityError || /UNSUPPORTED|not supported/i.test(String(e))) {
+      await redis.set(cacheKey, "none", "EX", PRICE_TTL_S);
+      return null;
+    }
+    return reference;
+  }
+}
+
 function needPartner(request: FastifyRequest, reply: FastifyReply): (ApiKeyRow & { partnerId: string }) | null {
   const key = request.apiKey!;
   if (!key.partnerId) {
@@ -523,19 +572,28 @@ export async function paymentRoutes(app: FastifyInstance) {
         response: { 200: { type: "object", additionalProperties: true }, 401: err },
       },
     },
-    async (_request, reply) => {
+    async (request, reply) => {
       const live = quoteProvider.name !== "mock";
-      const items = listChains()
+      const candidates = listChains()
         .filter((c) => !c.isArc)
         .flatMap((c) =>
-          getTokens(c.id).flatMap((t) => {
-            const priceUsd = referencePriceUsd(t.symbol);
-            if (priceUsd === null || (live && !canRouteFrom(c.id, t))) return [];
-            return [{ chainId: c.id, symbol: t.symbol, address: t.address, decimals: t.decimals, isNative: t.isNative, priceUsd }];
-          })
+          getTokens(c.id)
+            .filter((t) => referencePriceUsd(t.symbol) !== null && (!live || canRouteFrom(c.id, t)))
+            .map((t) => ({ chainId: c.id, symbol: t.symbol, address: t.address, decimals: t.decimals, isNative: t.isNative }))
         );
-      // Reference prices are indicative; every leg is re-priced by a live quote before it's paid.
-      return reply.send({ source: "reference", items });
+      if (!live) {
+        // Mock provider: indicative reference prices.
+        return reply.send({ source: "reference", items: candidates.map((t) => ({ ...t, priceUsd: referencePriceUsd(t.symbol)! })) });
+      }
+      // Two at a time: Circle's shared rate limit rejects bursts.
+      const priced: (typeof candidates[number] & { priceUsd: number })[] = [];
+      for (let i = 0; i < candidates.length; i += 2) {
+        const batch = await Promise.all(
+          candidates.slice(i, i + 2).map(async (t) => ({ ...t, priceUsd: await livePriceUsd(request.server.redis, t) }))
+        );
+        for (const p of batch) if (p.priceUsd !== null) priced.push(p as typeof priced[number]);
+      }
+      return reply.send({ source: "live", items: priced });
     }
   );
 }
