@@ -58,8 +58,8 @@ services:
   - type: web
     name: arc-gateway-web
     runtime: static
+    # Render provides pnpm (from packageManager); `corepack enable` fails there (read-only /usr/bin).
     buildCommand: >-
-      corepack enable &&
       pnpm install --frozen-lockfile &&
       pnpm --filter stableflow-sdk build &&
       pnpm --filter @arc/widget build &&
