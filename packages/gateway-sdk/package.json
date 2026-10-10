@@ -54,5 +54,9 @@
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
+  },
+  "homepage": "https://docs.stableflowr.xyz",
+  "bugs": {
+    "url": "https://github.com/BernardOnuh/arc-gateway/issues"
   }
 }

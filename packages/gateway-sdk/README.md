@@ -5,6 +5,8 @@ and your customer pays with any mix of tokens from their own wallet (USDC, USDT,
 ETH on Ethereum or Base). It settles to you as USDC on ARC. The flow is
 non-custodial: funds go straight from the customer's wallet to your payout address.
 
+Full guides: **https://docs.stableflowr.xyz** · API reference: https://api.stableflowr.xyz/docs
+
 - Works in Node 18+, Bun, Deno and browsers (uses `fetch` and Web Crypto)
 - ESM and CommonJS, fully typed, no runtime dependencies
 
@@ -18,7 +20,6 @@ npm install stableflowr-sdk
 import { Stableflowr, checkoutUrl } from "stableflowr-sdk";
 
 const gateway = new Stableflowr({
-  baseUrl: "https://api.your-gateway.com", // your gateway's API URL
   apiKey: process.env.STABLEFLOWR_SECRET_KEY, // gw_live_… (server only)
 });
 
@@ -33,12 +34,15 @@ const payment = await gateway.createPayment({
 });
 
 const url = checkoutUrl({
-  checkoutBaseUrl: "https://pay.your-gateway.com", // the hosted checkout's site
   paymentId: payment.paymentId,
   publishableKey: process.env.STABLEFLOWR_PUBLISHABLE_KEY!, // pk_live_…
 });
 // redirect the customer to `url`
 ```
+
+The client talks to `https://api.stableflowr.xyz` and `checkoutUrl` links to
+`https://stableflowr.xyz` by default. Running your own gateway? Pass
+`baseUrl` to `new Stableflowr({ baseUrl, apiKey })` and `checkoutBaseUrl` to `checkoutUrl`.
 
 Secret keys (`gw_live_…`) belong on your server only. The browser uses a
 publishable key (`pk_live_…`), which only works from the origins you list:

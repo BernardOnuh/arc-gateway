@@ -33,7 +33,12 @@ import type {
   TokenInfo,
 } from "./types.js";
 
+/** The hosted Stableflowr API and site, used when no baseUrl / checkoutBaseUrl is given. */
+export const DEFAULT_API_URL = "https://api.stableflowr.xyz";
+export const DEFAULT_CHECKOUT_URL = "https://stableflowr.xyz";
+
 export interface GatewayClientOptions {
+  /** API base URL. Default https://api.stableflowr.xyz. */
   baseUrl?: string;
   apiKey?: string;
   fetchImpl?: typeof fetch;
@@ -61,11 +66,12 @@ export interface PaymentPollOptions {
 const FINAL_PAYMENT_STATUSES = new Set(["paid", "expired", "canceled"]);
 
 /**
- * Link to the hosted checkout page for a payment. `checkoutBaseUrl` is the web
- * app's origin (not the API's); the publishable key must allow that origin.
+ * Link to the hosted checkout page for a payment. `checkoutBaseUrl` is the
+ * checkout site (default https://stableflowr.xyz), not the API; the publishable
+ * key must allow that origin.
  */
-export function checkoutUrl(params: { checkoutBaseUrl: string; paymentId: string; publishableKey: string }): string {
-  const base = params.checkoutBaseUrl.replace(/\/+$/, "");
+export function checkoutUrl(params: { checkoutBaseUrl?: string; paymentId: string; publishableKey: string }): string {
+  const base = (params.checkoutBaseUrl ?? DEFAULT_CHECKOUT_URL).replace(/\/+$/, "");
   return `${base}/checkout/${encodeURIComponent(params.paymentId)}?key=${encodeURIComponent(params.publishableKey)}`;
 }
 
@@ -77,7 +83,7 @@ export class GatewayClient {
   readonly apiKey?: string;
 
   constructor(options: GatewayClientOptions = {}) {
-    this.baseUrl = (options.baseUrl ?? "http://localhost:3000").replace(/\/+$/, "");
+    this.baseUrl = (options.baseUrl ?? DEFAULT_API_URL).replace(/\/+$/, "");
     // Wrap the global so it is never invoked with the client as `this`:
     // browsers throw "Illegal invocation" for a detached window.fetch.
     this.fetchImpl = options.fetchImpl ?? ((input, init) => fetch(input, init));

@@ -268,3 +268,14 @@ describe("Stableflowr", () => {
     expect(Stableflowr).toBe(GatewayClient);
   });
 });
+
+describe("defaults", () => {
+  it("talks to the hosted API and links to the hosted checkout", async () => {
+    const urls: string[] = [];
+    const sf = new Stableflowr({ fetchImpl: (async (u: string) => (urls.push(u), { ok: true, status: 200, text: async () => "[]" })) as any });
+    await sf.chains();
+    expect(urls[0]).toBe("https://api.stableflowr.xyz/v1/chains");
+    expect(checkoutUrl({ paymentId: "p1", publishableKey: "pk_live_x" })).toBe("https://stableflowr.xyz/checkout/p1?key=pk_live_x");
+  });
+});
+
