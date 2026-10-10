@@ -15,7 +15,7 @@ import type {
   PaymentLeg,
   PriceItem,
 } from "./types.js";
-import { amountForCents, connectWallet, injectedProvider, isUserRejection, readHoldings } from "./wallet.js";
+import { amountForCents, connectWallet, ensureChain, injectedProvider, isUserRejection, readHoldings } from "./wallet.js";
 
 /** Defaults for every customer-facing string; merchants override any of them. */
 export const DEFAULT_CHECKOUT_TEXTS: Record<CheckoutTextKey, string> = {
@@ -370,6 +370,24 @@ export function ArcCheckout(props: ArcCheckoutProps) {
     [api, paymentId, pollIntervalMs]
   );
 
+  // Reopened while a payment is in flight (e.g. the link opened again later):
+  // show its progress and keep it current until it settles.
+  const watching = payment?.status === "processing" && view.name !== "paying";
+  useEffect(() => {
+    if (!watching || demo) return;
+    let stopped = false;
+    void pollPayment(() => {}).then((p) => {
+      if (stopped || !p) return;
+      if (p.status === "paid") {
+        setView({ name: "done" });
+        cb.current.onPaid?.(p);
+      }
+    });
+    return () => {
+      stopped = true;
+    };
+  }, [watching, demo, pollPayment]);
+
   async function pay() {
     if (!payment || !holdings || !account) return;
     const chosen = holdings.filter((h) => (alloc[h.key] ?? 0) > 0);
@@ -388,6 +406,8 @@ export function ArcCheckout(props: ArcCheckoutProps) {
     };
     setView({ name: "paying", steps });
 
+    // Why a leg failed, so the message after polling can say so.
+    let failure: string | null = null;
     // Send each leg in turn; the customer confirms each one in their wallet.
     for (const h of chosen) {
       update(h.key, { state: "active", detail: "Preparing…" });
@@ -401,6 +421,9 @@ export function ArcCheckout(props: ArcCheckoutProps) {
           update(h.key, { state: "done", detail: "Paid" });
           continue;
         }
+        update(h.key, { detail: `Switch to ${h.chainName} in your wallet` });
+        await ensureChain(provider!, { id: h.chainId, name: h.chainName });
+        update(h.key, { detail: "Preparing…" });
         const leg: PaymentLeg = await api.addLeg(payment.paymentId, {
           originChainId: h.chainId,
           tokenIn: h.token.symbol,
@@ -414,7 +437,10 @@ export function ArcCheckout(props: ArcCheckoutProps) {
         await api.legSubmitted(payment.paymentId, leg.legId, txHash);
         update(h.key, { detail: "Processing…" });
       } catch (e) {
-        update(h.key, { state: "failed", detail: isUserRejection(e) ? "Cancelled in your wallet" : asError(e).message });
+        const reason = isUserRejection(e) ? "Cancelled in your wallet" : asError(e).message;
+        console.error("[ArcCheckout] payment leg failed", e);
+        failure = `${h.token.symbol} on ${h.chainName}: ${reason}`;
+        update(h.key, { state: "failed", detail: reason });
         cb.current.onError?.(asError(e));
         break;
       }
@@ -463,7 +489,7 @@ export function ArcCheckout(props: ArcCheckoutProps) {
       setError(
         final.paidCents > 0
           ? `We received ${usd(final.paidCents)}. Choose how to pay the remaining ${usd(final.remainingCents)}.`
-          : "The payment didn't go through. Nothing was charged; try again or pick another token."
+          : `The payment didn't go through${failure ? ` (${failure})` : ""}. Nothing was charged; try again or pick another token.`
       );
     }
   }
@@ -548,6 +574,27 @@ export function ArcCheckout(props: ArcCheckoutProps) {
       <p className="arcw-error" role="alert">
         This payment expired. Go back to {merchant} to start again.
       </p>
+    );
+  } else if (watching) {
+    body = (
+      <div className="arcc-success" aria-live="polite">
+        <p className="arcw-note" style={{ display: "flex", justifyContent: "center", gap: 8 }}>
+          <Spinner /> Payment processing
+        </p>
+        <p>We have your transaction and are confirming it. This usually takes a few minutes; this page updates by itself.</p>
+        <div className="arcc-receipt">
+          {payment.legs
+            .filter((l) => l.originTx)
+            .map((l) => (
+              <div key={l.legId}>
+                <span>
+                  {formatUnits(l.amountIn, l.token.decimals)} {l.token.symbol} · {chainName(l.originChainId)}
+                </span>
+                {l.status === "EXECUTED_ON_ARC" ? "Paid" : "Confirming…"}
+              </div>
+            ))}
+        </div>
+      </div>
     );
   } else if (view.name === "connect") {
     body = (

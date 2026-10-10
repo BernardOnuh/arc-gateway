@@ -29,12 +29,14 @@ type Status = "open" | "processing" | "paid" | "partially_paid" | "expired";
 
 /**
  * Fake gateway + RPC nodes. Legs are recorded as they're quoted/submitted;
- * `settle` decides each submitted leg's final status on the next poll.
+ * `settle` decides each submitted leg's final status once the payment has been
+ * read more than `settleAfter` times.
  */
 function setup({
   amountCents = 1000,
   status = "open" as Status,
   settle = (_i: number) => "EXECUTED_ON_ARC" as "EXECUTED_ON_ARC" | "FAILED",
+  settleAfter = 1,
 } = {}) {
   const legs: any[] = [];
   let polls = 0;
@@ -79,7 +81,7 @@ function setup({
     if (path === "/v1/prices") return json(200, { source: "reference", items: prices });
     if (path === "/v1/payments/p-1" && (init.method ?? "GET") === "GET") {
       polls++;
-      for (const [i, l] of legs.entries()) if (l.status === "PENDING" && polls > 1) Object.assign(l, { status: settle(i), destTx: TX(i + 5) });
+      for (const [i, l] of legs.entries()) if (l.status === "PENDING" && polls > settleAfter) Object.assign(l, { status: settle(i), destTx: TX(i + 5) });
       return json(200, payment());
     }
     if (path === "/v1/payments/p-1/legs") {
@@ -111,7 +113,16 @@ function setup({
     return json(404, { error: "not found" });
   });
   vi.stubGlobal("fetch", fetchMock);
-  const provider: Eip1193Provider = { request: vi.fn(async ({ method }) => (method === "eth_requestAccounts" ? [ACCOUNT] : null)) };
+  // A wallet that starts on Base and switches networks when asked.
+  let walletChain = 8453;
+  const provider: Eip1193Provider = {
+    request: vi.fn(async ({ method, params }: { method: string; params?: any }) => {
+      if (method === "eth_requestAccounts") return [ACCOUNT];
+      if (method === "eth_chainId") return `0x${walletChain.toString(16)}`;
+      if (method === "wallet_switchEthereumChain") walletChain = Number.parseInt(params[0].chainId, 16);
+      return null;
+    }),
+  };
   return { fetchMock, provider, legs };
 }
 
@@ -161,6 +172,9 @@ describe("ArcCheckout", () => {
       expect.objectContaining({ originChainId: 1, tokenIn: "ETH", payer: ACCOUNT }),
     ]);
     expect(executeLeg).toHaveBeenCalledTimes(2);
+    // Already on Base for the USDC leg; switched to Ethereum before the ETH leg was signed.
+    const switches = (provider.request as ReturnType<typeof vi.fn>).mock.calls.filter(([r]: any[]) => r.method === "wallet_switchEthereumChain");
+    expect(switches.map(([r]: any[]) => r.params[0].chainId)).toEqual(["0x1"]);
     expect(calls(fetchMock, "/legs/leg-1/submitted")).toHaveLength(1);
     // The publishable key authenticates checkout calls.
     expect(new Headers(legCalls[0][1].headers).get("authorization")).toBe(`Bearer ${PK}`);
@@ -195,6 +209,28 @@ describe("ArcCheckout", () => {
     expect(screen.getByRole("button", { name: "Pay $4.03" })).toBeDisabled();
   });
 
+  it("shows progress when the link is reopened mid-payment, then the receipt", async () => {
+    const { legs, provider } = setup({ settleAfter: 3 });
+    legs.push({
+      legId: "leg-1",
+      quoteId: "q-1",
+      originChainId: 8453,
+      token: { symbol: "ETH", address: "0x0000000000000000000000000000000000000000", decimals: 18, isNative: true },
+      amountIn: "4000000000000000",
+      valueCents: 1000,
+      payer: ACCOUNT,
+      status: "PENDING",
+      originTx: TX(1),
+      destTx: null,
+      execution: { fromChain: "Base", toChain: "Arc", tokenIn: "NATIVE", tokenOut: "USDC", amountIn: "x", recipientAddress: PAYOUT, slippageBps: 50 },
+    });
+    render(<ArcCheckout publishableKey={PK} baseUrl="http://gw.test" paymentId="p-1" provider={provider} pollIntervalMs={20} />);
+
+    expect(await screen.findByText("Payment processing")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Connect wallet" })).not.toBeInTheDocument();
+    expect(await screen.findByText("Payment complete")).toBeInTheDocument();
+  });
+
   it("handles a cancelled wallet prompt without charging", async () => {
     const user = userEvent.setup();
     const { fetchMock, provider } = setup();
@@ -206,7 +242,10 @@ describe("ArcCheckout", () => {
     await user.click(within(list).getByLabelText(/USDC/));
     await user.click(within(list).getByLabelText(/ETH/));
     await user.click(screen.getByRole("button", { name: "Pay $10.00" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("didn't go through. Nothing was charged");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("didn't go through");
+    expect(alert).toHaveTextContent("Cancelled in your wallet");
+    expect(alert).toHaveTextContent("Nothing was charged");
     expect(executeLeg).toHaveBeenCalledTimes(1);
     expect(calls(fetchMock, "/submitted")).toHaveLength(0);
   });

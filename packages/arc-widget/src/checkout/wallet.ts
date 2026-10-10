@@ -11,6 +11,26 @@ export async function connectWallet(provider: Eip1193Provider): Promise<string> 
   return accounts[0].toLowerCase();
 }
 
+/**
+ * Puts the wallet on `chain` before a leg is signed there. Wallets sign on their
+ * active network only, so paying from Ethereum while the wallet sits on Base fails.
+ */
+export async function ensureChain(provider: Eip1193Provider, chain: { id: number; name: string }): Promise<void> {
+  const active = Number.parseInt(String(await provider.request({ method: "eth_chainId" })), 16);
+  if (active === chain.id) return;
+  try {
+    await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: `0x${chain.id.toString(16)}` }] });
+  } catch (err) {
+    const e = err as { code?: number; cause?: { code?: number } };
+    if (e?.code === 4902 || e?.cause?.code === 4902) {
+      throw new Error(`Add the ${chain.name} network to your wallet, then try again.`);
+    }
+    throw err;
+  }
+  const now = Number.parseInt(String(await provider.request({ method: "eth_chainId" })), 16);
+  if (now !== chain.id) throw new Error(`Switch your wallet to ${chain.name}, then try again.`);
+}
+
 /** True when the wallet says the user cancelled (EIP-1193 code 4001). */
 export function isUserRejection(err: unknown): boolean {
   const e = err as { code?: number; message?: string; cause?: { code?: number } };
