@@ -1,4 +1,6 @@
 export { GatewayError } from "./errors.js";
+export { verifyWebhook } from "./webhooks.js";
+export type { WebhookEvent } from "./webhooks.js";
 export { GatewayClient } from "./client.js";
 export type { GatewayClientOptions, PollOptions } from "./client.js";
 export { CustomerClient } from "./customer.js";
@@ -13,6 +15,8 @@ export type {
   CustomerAccount,
   CustomerSession,
   CheckoutBranding,
+  WebhookDelivery,
+  WebhookEndpoint,
   CheckoutTextKey,
   CreatePaymentParams,
   DashboardCredentials,

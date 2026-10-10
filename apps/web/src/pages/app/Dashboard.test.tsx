@@ -123,6 +123,8 @@ function signedIn(overrides: Record<string, (url: URL, init: RequestInit) => { s
         return { status: 200, body: profile };
       case "GET /v1/partners/me/branding":
         return { status: 200, body: {} };
+      case "GET /v1/webhooks":
+        return { status: 200, body: { items: [] } };
       case "GET /v1/chains":
         return { status: 200, body: chains };
       case "GET /v1/tokens":
@@ -475,5 +477,35 @@ describe("payments", () => {
     await user.click(screen.getByRole("button", { name: "Save address" }));
     expect(await screen.findByText("Payout address saved.")).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/v1/partners/me/payout"))).toBe(true);
+  });
+});
+
+describe("webhooks", () => {
+  it("adds an endpoint, reveals its secret, and sends a test", async () => {
+    const user = userEvent.setup();
+    const hook = { id: "wh-1", url: "https://shop.example.com/hooks/arc", secret: "whsec_abc123", active: true, createdAt: "2026-10-08T00:00:00.000Z" };
+    let hooks: unknown[] = [];
+    const fetchMock = signedIn({
+      "GET /v1/webhooks": () => ({ status: 200, body: { items: hooks } }),
+      "POST /v1/webhooks": () => {
+        hooks = [hook];
+        return { status: 201, body: hook };
+      },
+      "POST /v1/webhooks/wh-1/test": () => ({
+        status: 200,
+        body: { id: "ev-1", type: "ping", status: "succeeded", attempts: 1, lastStatusCode: 200, lastError: null, paymentId: null, createdAt: "x", deliveredAt: "x", nextAttemptAt: null },
+      }),
+    });
+    renderApp("/app/settings");
+    await user.type(await screen.findByLabelText("Endpoint URL"), hook.url);
+    await user.click(screen.getByRole("button", { name: "Add endpoint" }));
+    expect(await screen.findByText(hook.url)).toBeInTheDocument();
+    expect(screen.queryByText("whsec_abc123")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reveal" }));
+    expect(screen.getByText("whsec_abc123")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Send test" }));
+    expect(await screen.findByText("Test delivered (HTTP 200)")).toBeInTheDocument();
+    const post = fetchMock.mock.calls.find(([u, init]) => String(u).endsWith("/v1/webhooks") && init?.method === "POST")!;
+    expect(JSON.parse(String(post[1]!.body))).toEqual({ url: hook.url });
   });
 });

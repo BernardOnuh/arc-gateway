@@ -64,6 +64,20 @@
       "when": 1791611226880,
       "tag": "0008_fresh_marauders",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791617088820,
+      "tag": "0009_common_swordsman",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791617100666,
+      "tag": "0010_romantic_zuras",
+      "breakpoints": true
     }
   ]
 }

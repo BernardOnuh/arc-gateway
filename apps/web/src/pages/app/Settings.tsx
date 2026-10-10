@@ -1,6 +1,7 @@
 import { PublishableKeysCard, SecretKeyCard } from "../../components/dashboard/ApiKeys";
 import { PasswordCard } from "../../components/dashboard/PasswordCard";
 import { PayoutCard } from "../../components/dashboard/PayoutCard";
+import { WebhooksCard } from "../../components/dashboard/WebhooksCard";
 import { Card, ErrorState, Loading, PageTitle } from "../../components/dashboard/ui";
 import { formatBps, formatDate } from "../../lib/format";
 import { usePartnerProfile } from "../../lib/queries";
@@ -46,6 +47,7 @@ export function Settings() {
           <PublishableKeysCard />
 
           <PayoutCard payoutAddress={profile.data.payoutAddress} />
+          <WebhooksCard />
         </div>
       )}
     </>

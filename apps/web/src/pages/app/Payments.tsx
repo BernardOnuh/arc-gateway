@@ -180,6 +180,16 @@ export function Payments() {
                             {p.status === "partially_paid" && (
                               <span className="block text-xs font-normal text-ink-600">{usd(p.paidCents)} received</span>
                             )}
+                            {p.refundOwedCents > 0 && (
+                              <span className="mt-1 block text-xs font-medium text-amber-800" title={p.refunds.map((r) => `${usd(r.valueCents)} → ${r.payer}`).join("\n")}>
+                                Refund owed {usd(p.refundOwedCents)}
+                                {p.refunds.map((r) => (
+                                  <span key={r.legId} className="block font-mono font-normal text-ink-600">
+                                    {usd(r.valueCents)} to {r.payer.slice(0, 6)}…{r.payer.slice(-4)}
+                                  </span>
+                                ))}
+                              </span>
+                            )}
                           </td>
                           <td className="py-3 pr-4">
                             <PaymentStatusBadge status={p.status} />

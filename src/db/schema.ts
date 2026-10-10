@@ -169,32 +169,6 @@ export const intents = pgTable("intents", {
   quoteIdUnique: uniqueIndex("intents_quote_id_unique").on(table.quoteId),
 }));
 
-export const webhookEndpoints = pgTable("webhook_endpoints", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  apiKeyId: uuid("api_key_id")
-    .notNull()
-    .references(() => apiKeys.id, { onDelete: "cascade" }),
-  url: text("url").notNull(),
-  secretHash: text("secret_hash").notNull(),
-  active: boolean("active").notNull().default(true),
-});
-
-export const webhookDeliveries = pgTable("webhook_deliveries", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  endpointId: uuid("endpoint_id")
-    .notNull()
-    .references(() => webhookEndpoints.id, { onDelete: "cascade" }),
-  intentId: uuid("intent_id")
-    .notNull()
-    .references(() => intents.id, { onDelete: "cascade" }),
-  event: text("event").notNull(),
-  payload: jsonb("payload"),
-  attempts: integer("attempts").notNull().default(0),
-  status: text("status").notNull().default("pending"),
-  nextAttemptAt: timestamp("next_attempt_at"),
-  lastError: text("last_error"),
-});
-
 export const paymentStatusEnum = pgEnum("payment_status", [
   "open",
   "processing",
@@ -253,3 +227,34 @@ export const paymentLegs = pgTable(
     quoteUnique: uniqueIndex("payment_legs_quote_unique").on(table.quoteId),
   })
 );
+
+/** A merchant's HTTPS endpoint for signed payment events. */
+export const partnerWebhooks = pgTable("partner_webhooks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  partnerId: uuid("partner_id")
+    .notNull()
+    .references(() => partners.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  /** HMAC signing secret (whsec_…). Stored because signing needs it; shown to the partner. */
+  secret: text("secret").notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+/** One event to one endpoint, with retry state. */
+export const webhookEvents = pgTable("webhook_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  webhookId: uuid("webhook_id")
+    .notNull()
+    .references(() => partnerWebhooks.id, { onDelete: "cascade" }),
+  paymentId: uuid("payment_id").references(() => payments.id, { onDelete: "set null" }),
+  type: text("type").notNull(),
+  payload: jsonb("payload").notNull(),
+  status: text("status").$type<"pending" | "succeeded" | "failed">().notNull().default("pending"),
+  attempts: integer("attempts").notNull().default(0),
+  nextAttemptAt: timestamp("next_attempt_at").notNull().defaultNow(),
+  lastStatusCode: integer("last_status_code"),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  deliveredAt: timestamp("delivered_at"),
+});

@@ -174,3 +174,45 @@ export function useSaveBranding() {
     onSuccess: (saved) => queryClient.setQueryData(["branding", scope], saved),
   });
 }
+
+export function useWebhooks() {
+  const { client, scope } = useGateway();
+  return useQuery({ queryKey: ["webhooks", scope], queryFn: () => client.listWebhooks() });
+}
+
+export function useWebhookEvents(id: string | null) {
+  const { client, scope } = useGateway();
+  return useQuery({
+    queryKey: ["webhook-events", scope, id],
+    queryFn: () => client.listWebhookEvents(id!),
+    enabled: Boolean(id),
+    refetchInterval: 10_000,
+  });
+}
+
+export function useCreateWebhook() {
+  const { client, scope } = useGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (url: string) => client.createWebhook(url),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["webhooks", scope] }),
+  });
+}
+
+export function useDeleteWebhook() {
+  const { client, scope } = useGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => client.deleteWebhook(id),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["webhooks", scope] }),
+  });
+}
+
+export function useTestWebhook() {
+  const { client, scope } = useGateway();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => client.testWebhook(id),
+    onSuccess: (_r, id) => void queryClient.invalidateQueries({ queryKey: ["webhook-events", scope, id] }),
+  });
+}

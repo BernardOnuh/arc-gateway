@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CustomerClient, GatewayClient, GatewayError } from "../src/index.js";
+import { CustomerClient, GatewayClient, GatewayError, verifyWebhook } from "../src/index.js";
 
 interface Call {
   url: string;
@@ -23,6 +23,27 @@ function makeClient(
 }
 
 const ok = (body: unknown) => (_c: Call, _u: string, _i: any) => ({ status: 200, body });
+
+describe("verifyWebhook", () => {
+  const secret = "whsec_test";
+  async function sign(body: string, t = Math.floor(Date.now() / 1000)) {
+    const { createHmac } = await import("crypto");
+    return `t=${t},v1=${createHmac("sha256", secret).update(`${t}.${body}`).digest("hex")}`;
+  }
+  it("accepts a valid signature and returns the event", async () => {
+    const body = JSON.stringify({ id: "e1", type: "payment.paid", created: "x", data: { reference: "o1" } });
+    const event = await verifyWebhook(body, await sign(body), secret);
+    expect(event).toMatchObject({ type: "payment.paid", data: { reference: "o1" } });
+  });
+  it("rejects tampering, wrong secrets, stale timestamps and junk headers", async () => {
+    const body = JSON.stringify({ type: "payment.paid" });
+    const header = await sign(body);
+    await expect(verifyWebhook(body.replace("paid", "PAID"), header, secret)).rejects.toThrow(/mismatch/);
+    await expect(verifyWebhook(body, header, "whsec_other")).rejects.toThrow(/mismatch/);
+    await expect(verifyWebhook(body, await sign(body, Math.floor(Date.now() / 1000) - 3600), secret)).rejects.toThrow(/window/);
+    await expect(verifyWebhook(body, "nonsense", secret)).rejects.toThrow(/malformed/);
+  });
+});
 
 describe("GatewayClient", () => {
   it("registerPartner posts to /v1/partners without auth", async () => {

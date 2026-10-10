@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
-import { and, count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray, lt, or } from "drizzle-orm";
 import { requireApiKey, type ApiKeyRow } from "../auth/apiKey.js";
 import { config } from "../config.js";
 import { getChain, isSupportedChain, listChains } from "../chains.js";
@@ -14,6 +14,7 @@ import type { UpstreamQuote } from "../providers/types.js";
 import { errorResponseSchema, toJsonSchema } from "../schemas.js";
 import { getTokens, resolveToken } from "../tokens.js";
 import { transactionSender } from "../onchain.js";
+import { enqueueEvent, type WebhookEventType } from "../webhooks.js";
 
 function toHuman(amount: string, decimals: number): string {
   const raw = BigInt(amount);
@@ -80,8 +81,10 @@ interface LegView {
 /**
  * Loads legs, refreshes in-flight intents (best effort: a provider outage
  * keeps the stored status), and rolls the payment status up:
- * settled ≥ amount → paid; anything in flight → processing; some settled →
- * partially_paid; past expiry → expired; else open.
+ * settled ≥ amount → paid; anything in flight → processing; past expiry →
+ * expired (with a refund owed if part settled); some settled →
+ * partially_paid; else open. Each change is applied atomically and queues
+ * exactly one webhook event, even with several instances running.
  */
 async function rollUp(payment: PaymentRow, refresh = true): Promise<{ payment: PaymentRow; legs: LegView[] }> {
   const rows = await db
@@ -114,21 +117,58 @@ async function rollUp(payment: PaymentRow, refresh = true): Promise<{ payment: P
       ? "paid"
       : inFlight
         ? "processing"
-        : settled > 0
-          ? "partially_paid"
-          : expired
-            ? "expired"
+        : expired
+          ? "expired"
+          : settled > 0
+            ? "partially_paid"
             : "open";
 
   if (status !== payment.status) {
-    const [updated] = await db
-      .update(payments)
-      .set({ status, updatedAt: new Date(), ...(status === "paid" && !payment.paidAt ? { paidAt: new Date() } : {}) })
-      .where(eq(payments.id, payment.id))
-      .returning();
-    payment = updated;
+    const previous = payment.status;
+    const updated = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .update(payments)
+        .set({ status, updatedAt: new Date(), ...(status === "paid" && !payment.paidAt ? { paidAt: new Date() } : {}) })
+        .where(and(eq(payments.id, payment.id), eq(payments.status, previous)))
+        .returning();
+      if (!row) return null; // another instance already moved it
+      const event = EVENT_FOR_STATUS[status];
+      if (event) {
+        const { branding: _branding, ...data } = await paymentView(row, legs);
+        await enqueueEvent(tx, row.partnerId, event, data, row.id);
+      }
+      return row;
+    });
+    if (updated) payment = updated;
+    else [payment] = await db.select().from(payments).where(eq(payments.id, payment.id));
   }
   return { payment, legs };
+}
+
+const EVENT_FOR_STATUS: Partial<Record<PaymentRow["status"], WebhookEventType>> = {
+  processing: "payment.processing",
+  paid: "payment.paid",
+  partially_paid: "payment.partially_paid",
+  expired: "payment.expired",
+};
+
+/**
+ * Background sweep: moves in-flight payments along and expires stale ones,
+ * so statuses (and webhooks) progress even after the customer leaves.
+ */
+export async function sweepPayments(limit = 50): Promise<number> {
+  const due = await db
+    .select()
+    .from(payments)
+    .where(
+      or(
+        eq(payments.status, "processing"),
+        and(inArray(payments.status, ["open", "partially_paid"]), lt(payments.expiresAt, new Date()))
+      )
+    )
+    .limit(limit);
+  for (const p of due) await rollUp(p);
+  return due.length;
 }
 
 function legView({ leg, quote, intent }: LegView) {
@@ -183,6 +223,7 @@ async function paymentView(payment: PaymentRow, legs: LegView[]) {
   const pending = legs
     .filter((l) => l.intent && !TERMINAL.has(l.intent.status))
     .reduce((s, l) => s + l.leg.valueCents, 0);
+  const refundOwed = payment.status === "expired" ? settled : 0;
   return {
     paymentId: payment.id,
     merchantName: branding.displayName || partner?.name || "",
@@ -197,6 +238,14 @@ async function paymentView(payment: PaymentRow, legs: LegView[]) {
     paidCents: settled,
     pendingCents: pending,
     remainingCents: Math.max(0, payment.amountCents - settled - pending),
+    /** Expired after part was paid: the merchant owes the customer this much (they hold the funds). */
+    refundOwedCents: refundOwed,
+    refunds:
+      refundOwed > 0
+        ? legs
+            .filter((l) => l.intent?.status === "EXECUTED_ON_ARC")
+            .map((l) => ({ payer: l.leg.payer, valueCents: l.leg.valueCents, legId: l.leg.id }))
+        : [],
     destChainId: payment.destChainId,
     payoutAddress: payment.payoutAddress,
     expiresAt: payment.expiresAt.toISOString(),
@@ -562,9 +611,10 @@ export async function paymentRoutes(app: FastifyInstance) {
           .values({ quoteId: row.quote.id, apiKeyId: key.id, status: "PENDING", upstreamId: txHash, originTx: txHash })
           .returning();
         const [leg] = await tx.update(paymentLegs).set({ intentId: intent.id }).where(eq(paymentLegs.id, row.leg.id)).returning();
-        await tx.update(payments).set({ status: "processing", updatedAt: new Date() }).where(eq(payments.id, payment.id));
         return { leg, quote: row.quote, intent };
       });
+      // Moves the payment to processing (and queues payment.processing).
+      await rollUp(payment, false);
       return reply.send(legView(result));
     }
   );

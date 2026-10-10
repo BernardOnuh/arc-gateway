@@ -21,6 +21,9 @@ import { ledgerRoutes } from "./routes/ledger.js";
 import { quoteRoutes } from "./routes/quotes.js";
 import { paymentRoutes } from "./routes/payments.js";
 import { brandingRoutes } from "./routes/branding.js";
+import { webhookRoutes } from "./routes/webhooks.js";
+import { sweepPayments } from "./routes/payments.js";
+import { deliverDue } from "./webhooks.js";
 import { intentRoutes } from "./routes/intents.js";
 
 export type App = Awaited<ReturnType<typeof buildApp>>;
@@ -135,7 +138,7 @@ export async function buildApp() {
       cb(null, {
         origin: widget ? true : dashboardOrigins,
         credentials: !widget && !wildcard,
-        methods: ["GET", "POST", "PUT"],
+        methods: ["GET", "POST", "PUT", "DELETE"],
         allowedHeaders: ["authorization", "content-type", DASHBOARD_HEADER],
         maxAge: 600,
       });
@@ -157,6 +160,7 @@ export async function buildApp() {
   await quoteRoutes(app);
   await paymentRoutes(app);
   await brandingRoutes(app);
+  await webhookRoutes(app);
   await intentRoutes(app);
 
   return app;
@@ -174,11 +178,37 @@ async function bootstrap() {
         .catch(() => process.exit(1));
     });
   }
+  startWorkers(app);
   await app.listen({ port: config.port, host: "0.0.0.0" });
   app.log.info(`arc-gateway listening on http://localhost:${config.port}`);
   app.log.info(`Swagger UI: http://localhost:${config.port}/docs`);
   app.log.info(`Endpoint index: http://localhost:${config.port}/`);
   console.log(app.printRoutes({ commonPrefix: false }));
+}
+
+/**
+ * Background loops (not started in tests): deliver due webhooks every 5s and
+ * sweep payments every 15s. Safe with several instances: deliveries are
+ * claimed with SKIP LOCKED and status changes are conditional updates.
+ */
+function startWorkers(app: App) {
+  const loop = (name: string, everyMs: number, fn: () => Promise<unknown>) => {
+    let running = false;
+    const timer = setInterval(async () => {
+      if (running) return;
+      running = true;
+      try {
+        await fn();
+      } catch (e) {
+        app.log.error({ err: e }, `${name} failed`);
+      } finally {
+        running = false;
+      }
+    }, everyMs);
+    app.addHook("onClose", async () => clearInterval(timer));
+  };
+  loop("webhook delivery", 5_000, () => deliverDue());
+  loop("payment sweep", 15_000, () => sweepPayments());
 }
 
 if (!config.isTest) {

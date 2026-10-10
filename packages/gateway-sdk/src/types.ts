@@ -319,6 +319,10 @@ export interface Payment {
   paidCents: number;
   pendingCents: number;
   remainingCents: number;
+  /** Expired after part was paid: you hold the funds and owe the customer this much. */
+  refundOwedCents: number;
+  /** Who to refund (each settled part's paying wallet and value) when refundOwedCents > 0. */
+  refunds: { payer: string; valueCents: number; legId: string }[];
   destChainId: number;
   payoutAddress: string;
   expiresAt: string;
@@ -351,4 +355,26 @@ export interface CheckoutBranding {
   radius?: number;
   showNetworkDetails?: boolean;
   texts?: Partial<Record<CheckoutTextKey, string>>;
+}
+
+export interface WebhookEndpoint {
+  id: string;
+  url: string;
+  /** whsec_… signing secret for verifyWebhook. */
+  secret: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  type: string;
+  status: "pending" | "succeeded" | "failed";
+  attempts: number;
+  lastStatusCode: number | null;
+  lastError: string | null;
+  paymentId: string | null;
+  createdAt: string;
+  deliveredAt: string | null;
+  nextAttemptAt: string | null;
 }

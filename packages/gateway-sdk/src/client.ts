@@ -3,6 +3,8 @@ import type {
   ApiKeySummary,
   ChainInfo,
   CheckoutBranding,
+  WebhookDelivery,
+  WebhookEndpoint,
   CreatePaymentParams,
   CreatePublishableKeyParams,
   Payment,
@@ -157,6 +159,27 @@ export class GatewayClient {
   /** Sets the ARC address that receives checkout payments. */
   setPayoutAddress(payoutAddress: string, apiKey?: string): Promise<{ payoutAddress: string }> {
     return this.request("POST", "/v1/partners/me/payout", { body: { payoutAddress }, apiKey });
+  }
+
+  listWebhooks(apiKey?: string): Promise<{ items: WebhookEndpoint[] }> {
+    return this.request("GET", "/v1/webhooks", { apiKey });
+  }
+
+  createWebhook(url: string, apiKey?: string): Promise<WebhookEndpoint> {
+    return this.request("POST", "/v1/webhooks", { body: { url }, apiKey });
+  }
+
+  deleteWebhook(id: string, apiKey?: string): Promise<{ ok: true }> {
+    return this.request("DELETE", `/v1/webhooks/${encodeURIComponent(id)}`, { apiKey });
+  }
+
+  /** Sends a signed ping now and returns the delivery result. */
+  testWebhook(id: string, apiKey?: string): Promise<WebhookDelivery> {
+    return this.request("POST", `/v1/webhooks/${encodeURIComponent(id)}/test`, { apiKey });
+  }
+
+  listWebhookEvents(id: string, apiKey?: string): Promise<{ items: WebhookDelivery[] }> {
+    return this.request("GET", `/v1/webhooks/${encodeURIComponent(id)}/events`, { apiKey });
   }
 
   getBranding(apiKey?: string): Promise<CheckoutBranding> {
