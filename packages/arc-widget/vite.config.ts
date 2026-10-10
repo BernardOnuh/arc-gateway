@@ -2,7 +2,7 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 // `vite build` produces a single self-contained script (React bundled) that
-// registers <arc-swap-widget>, for partners who don't use a bundler.
+// registers <stableflowr-checkout>, for partners who don't use a bundler.
 export default defineConfig({
   plugins: [react()],
   define: { "process.env.NODE_ENV": JSON.stringify("production") },
@@ -13,7 +13,7 @@ export default defineConfig({
       entry: "src/standalone.ts",
       name: "ArcWidget",
       formats: ["es", "iife"],
-      fileName: (format) => (format === "es" ? "arc-widget.js" : "arc-widget.iife.js"),
+      fileName: (format) => (format === "es" ? "stableflowr.js" : "stableflowr.iife.js"),
     },
   },
   test: {

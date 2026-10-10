@@ -17,7 +17,7 @@ import { DEFAULT_FEE_BPS, formatBps } from "../../lib/format";
 const flow = [
   { icon: <IconUsers />, name: "Your customer", detail: "Picks a source chain and token in your app" },
   { icon: <IconLayers />, name: "Your business", detail: "Calls the gateway with your API key" },
-  { icon: <IconSwap />, name: "ARC Gateway", detail: "Prices the swap, applies your fee, routes the intent" },
+  { icon: <IconSwap />, name: "Stableflowr", detail: "Prices the swap, applies your fee, routes the intent" },
   { icon: <IconWallet />, name: "ARC network", detail: "Funds settle to the customer's address" },
 ];
 
@@ -246,7 +246,7 @@ export function HowItWorks() {
       <PageHeader
         eyebrow="The flow"
         title="How it works"
-        intro="ARC Gateway sits between your product and the ARC network. You keep the customer relationship; we handle pricing, routing and settlement."
+        intro="Stableflowr sits between your product and the ARC network. You keep the customer relationship; we handle pricing, routing and settlement."
       />
 
       <Section title="One request, four parties" intro="Your customer never leaves your product; the gateway does the cross-chain work behind it.">
@@ -326,7 +326,7 @@ export function HowItWorks() {
             },
             {
               icon: <IconShield />,
-              t: "ARC Gateway",
+              t: "Stableflowr",
               d: "Prices and routes every swap, enforces your keys' permissions and rate limits, and records each intent until it settles.",
             },
           ].map((c, i) => (

@@ -7,7 +7,7 @@ import {
   type CheckoutBranding,
   type CheckoutPreviewState,
   type CheckoutTextKey,
-} from "@arc/widget";
+} from "stableflowr-widget";
 import { CodeBlock } from "../../components/CodeBlock";
 import { buttonClass, Card, ErrorState, inputClass, Loading, PageTitle, secondaryButtonClass } from "../../components/dashboard/ui";
 import { Segmented } from "../../components/forms";
@@ -358,11 +358,11 @@ function TextTab({ value, onChange }: { value: CheckoutBranding; onChange: (b: C
 }
 
 const serverSnippet = `// Your server (Node). The secret key never reaches the browser.
-import { GatewayClient } from "stableflow-sdk";
+import { Stableflowr } from "stableflowr-sdk";
 
-const gateway = new GatewayClient({
+const gateway = new Stableflowr({
   baseUrl: "${GATEWAY_URL}",
-  apiKey: process.env.ARC_GATEWAY_KEY, // gw_live_…
+  apiKey: process.env.STABLEFLOWR_SECRET_KEY, // gw_live_…
 });
 
 // When the customer reaches checkout, create the payment for your price:
@@ -378,10 +378,10 @@ app.post("/api/checkout", async (req, res) => {
 // Before fulfilling, confirm it's paid (never trust the browser alone):
 const { status } = await gateway.getPayment(paymentId); // "paid"`;
 
-const reactSnippet = (pk: string) => `import { ArcCheckout } from "@arc/widget";
+const reactSnippet = (pk: string) => `import { StableflowrCheckout } from "stableflowr-widget";
 
 // Your saved branding (logo, colors, texts) applies automatically.
-<ArcCheckout
+<StableflowrCheckout
   publishableKey="${pk}"
   baseUrl="${GATEWAY_URL}"
   paymentId={paymentId}   // from POST /v1/payments on your server
@@ -392,15 +392,15 @@ const scriptSnippet = (pk: string) => `<!-- Module build: wallet tooling loads o
 <script type="module" src="${WIDGET_SCRIPT_URL}"></script>
 
 <!-- Your saved branding (logo, colors, texts) applies automatically. -->
-<arc-checkout
+<stableflowr-checkout
   publishable-key="${pk}"
   base-url="${GATEWAY_URL}"
   payment-id="PAYMENT_ID_FROM_YOUR_SERVER"
-></arc-checkout>
+></stableflowr-checkout>
 
 <script>
-  document.querySelector("arc-checkout")
-    .addEventListener("arc-paid", (e) => location.assign("/thanks?order=" + e.detail.reference));
+  document.querySelector("stableflowr-checkout")
+    .addEventListener("stableflowr-paid", (e) => location.assign("/thanks?order=" + e.detail.reference));
 </script>`;
 
 function Tabs<T extends string>({

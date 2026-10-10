@@ -50,7 +50,7 @@ export async function passwordResetRoutes(app: FastifyInstance) {
         await sendEmail(
           {
             to: parsed.data.email,
-            subject: "Reset your ARC Gateway password",
+            subject: "Reset your Stableflowr password",
             ...actionEmail({
               heading: "Reset your password",
               body: `Someone asked to reset the password for ${partner.name}. The link works once and expires in an hour.`,

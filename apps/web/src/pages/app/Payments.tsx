@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import type { Payment, PaymentStatus } from "stableflow-sdk";
+import type { Payment, PaymentStatus } from "stableflowr-sdk";
 import { CopyButton } from "../../components/CopyButton";
 import { Field } from "../../components/forms";
 import {

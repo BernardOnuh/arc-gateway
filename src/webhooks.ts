@@ -20,7 +20,7 @@ export function newWebhookSecret(): string {
   return `whsec_${randomBytes(24).toString("base64url")}`;
 }
 
-/** `Arc-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, "<t>.<raw body>")>` */
+/** `Stableflowr-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, "<t>.<raw body>")>` */
 export function signPayload(secret: string, body: string, timestamp = Math.floor(Date.now() / 1000)): string {
   const v1 = createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex");
   return `t=${timestamp},v1=${v1}`;
@@ -98,10 +98,10 @@ export async function attemptDelivery(event: EventRow): Promise<EventRow> {
       signal: controller.signal,
       headers: {
         "content-type": "application/json",
-        "user-agent": "ArcGateway-Webhooks/1.0",
-        "arc-event": event.type,
-        "arc-delivery-id": event.id,
-        "arc-signature": signPayload(hook.secret, body),
+        "user-agent": "Stableflowr-Webhooks/1.0",
+        "stableflowr-event": event.type,
+        "stableflowr-delivery-id": event.id,
+        "stableflowr-signature": signPayload(hook.secret, body),
       },
       body,
     });

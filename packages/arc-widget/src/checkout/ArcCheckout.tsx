@@ -30,7 +30,7 @@ export const DEFAULT_CHECKOUT_TEXTS: Record<CheckoutTextKey, string> = {
   emptyBalances: "No supported tokens in this wallet. Add funds or connect another wallet.",
   successTitle: "Payment complete",
   successMessage: "{amount} paid to {merchant}",
-  footer: "Secured by ARC Gateway",
+  footer: "Secured by Stableflowr",
 };
 
 /** Only data:image/* or https URLs reach an <img src>. */

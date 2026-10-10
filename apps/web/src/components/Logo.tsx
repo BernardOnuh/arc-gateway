@@ -10,7 +10,7 @@ export function Logo({ to = "/", tone = "dark" }: { to?: string; tone?: "dark" |
       }`}
     >
       <LogoMark tone={tone} />
-      ARC Gateway
+      Stableflowr
     </Link>
   );
 }

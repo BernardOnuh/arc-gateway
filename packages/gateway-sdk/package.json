@@ -1,7 +1,7 @@
 {
-  "name": "stableflow-sdk",
+  "name": "stableflowr-sdk",
   "version": "0.1.0",
-  "description": "TypeScript client for the Stableflow (ARC Gateway) API: checkout payments in any token, settled as USDC on ARC.",
+  "description": "TypeScript client for the Stableflowr API: checkout payments in any token, settled as USDC on ARC.",
   "keywords": [
     "payments",
     "checkout",

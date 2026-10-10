@@ -1,7 +1,7 @@
 {
-  "name": "@arc/widget",
+  "name": "stableflowr-widget",
   "version": "0.1.0",
-  "description": "Embeddable ARC Gateway swap widget: React component and <arc-swap-widget> web component",
+  "description": "Embeddable Stableflowr swap widget: React component and <arc-swap-widget> web component",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,7 +14,7 @@
       "types": "./dist/element.d.ts",
       "import": "./dist/element.js"
     },
-    "./standalone": "./dist/standalone/arc-widget.js"
+    "./standalone": "./dist/standalone/stableflowr.js"
   },
   "files": [
     "dist"

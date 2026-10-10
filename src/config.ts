@@ -43,8 +43,8 @@ const envSchema = z.object({
   ENABLE_GATEWAY_FUNDED_SUBMIT: z.enum(["true", "false"]).optional(),
   /** Resend API key for transactional email; without it, emails are logged instead of sent. */
   RESEND_API_KEY: z.string().optional(),
-  /** From address for email, e.g. "ARC Gateway <no-reply@yourdomain.com>" (domain verified in Resend). */
-  EMAIL_FROM: z.string().default("ARC Gateway <onboarding@resend.dev>"),
+  /** From address for email, e.g. "Stableflowr <no-reply@yourdomain.com>" (domain verified in Resend). */
+  EMAIL_FROM: z.string().default("Stableflowr <onboarding@resend.dev>"),
   /** Public URL of the web app, used in email links. */
   APP_URL: z.string().url().default("http://localhost:5173"),
 });

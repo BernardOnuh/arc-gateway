@@ -1,10 +1,10 @@
 /**
- * Verifies an ARC Gateway webhook. Pass the RAW request body (not re-serialized
- * JSON), the Arc-Signature header and your endpoint's whsec_ secret. Returns
+ * Verifies a Stableflowr webhook. Pass the RAW request body (not re-serialized
+ * JSON), the Stableflowr-Signature header and your endpoint's whsec_ secret. Returns
  * the parsed event, or throws. Works in Node 18+, Deno, Bun and browsers (Web Crypto).
  *
  *   app.post("/hooks/arc", express.raw({ type: "application/json" }), async (req, res) => {
- *     const event = await verifyWebhook(req.body.toString(), req.header("arc-signature"), process.env.ARC_WEBHOOK_SECRET);
+ *     const event = await verifyWebhook(req.body.toString(), req.header("stableflowr-signature"), process.env.ARC_WEBHOOK_SECRET);
  *     if (event.type === "payment.paid") fulfil(event.data.reference);
  *     res.sendStatus(200);
  *   });
@@ -16,7 +16,7 @@ export async function verifyWebhook<T = WebhookEvent>(
   toleranceSeconds = 300
 ): Promise<T> {
   const match = /^t=(\d+),v1=([0-9a-f]{64})$/.exec((signatureHeader ?? "").trim());
-  if (!match) throw new Error("missing or malformed Arc-Signature header");
+  if (!match) throw new Error("missing or malformed Stableflowr-Signature header");
   const [, t, v1] = match;
   const age = Math.abs(Math.floor(Date.now() / 1000) - Number(t));
   if (age > toleranceSeconds) throw new Error("webhook timestamp outside the allowed window");
@@ -31,7 +31,7 @@ export async function verifyWebhook<T = WebhookEvent>(
   return JSON.parse(rawBody) as T;
 }
 
-/** Webhook body. The unique delivery id is in the arc-delivery-id header (use it to drop duplicates). */
+/** Webhook body. The unique delivery id is in the stableflowr-delivery-id header (use it to drop duplicates). */
 export interface WebhookEvent {
   type: "payment.processing" | "payment.paid" | "payment.partially_paid" | "payment.expired" | "ping";
   created: string;

@@ -112,9 +112,9 @@ const CHECKOUT_ATTRS = [
 ] as const;
 
 /**
- * <arc-checkout publishable-key="pk_live_…" payment-id="…" base-url="https://gateway…">
+ * <stableflowr-checkout publishable-key="pk_live_…" payment-id="…" base-url="https://api…">
  *
- * Events: arc-paid, arc-status (detail = payment), arc-error (detail = Error).
+ * Events: stableflowr-paid, stableflowr-status (detail = payment), stableflowr-error (detail = Error).
  */
 export class ArcCheckoutElement extends HTMLElement {
   static observedAttributes = [...CHECKOUT_ATTRS];
@@ -143,7 +143,7 @@ export class ArcCheckoutElement extends HTMLElement {
     if (!this.root) return;
     const publishableKey = this.getAttribute("publishable-key");
     if (!publishableKey) {
-      this.root.render(createElement("p", null, "arc-checkout: set the publishable-key attribute."));
+      this.root.render(createElement("p", null, `${this.localName}: set the publishable-key attribute.`));
       return;
     }
     const radius = this.getAttribute("radius");
@@ -156,17 +156,19 @@ export class ArcCheckoutElement extends HTMLElement {
       radius: radius === null || Number.isNaN(Number(radius)) ? undefined : Number(radius),
       title: this.getAttribute("title") ?? undefined,
       showNetworkDetails: this.hasAttribute("show-network-details") ? true : undefined,
-      onPaid: (p) => this.emit("arc-paid", p),
-      onStatus: (p) => this.emit("arc-status", p),
-      onError: (e) => this.emit("arc-error", e),
+      onPaid: (p) => this.emit("stableflowr-paid", p),
+      onStatus: (p) => this.emit("stableflowr-status", p),
+      onError: (e) => this.emit("stableflowr-error", e),
     };
     this.root.render(createElement(ArcCheckout, props));
   }
 }
 
-/** Registers <arc-checkout> once. Safe to call repeatedly. */
-export function defineArcCheckout(tagName = "arc-checkout") {
+/** Registers <stableflowr-checkout> once. Safe to call repeatedly. */
+export function defineArcCheckout(tagName = "stableflowr-checkout") {
   if (typeof customElements !== "undefined" && !customElements.get(tagName)) {
     customElements.define(tagName, class extends ArcCheckoutElement {});
   }
 }
+
+export { defineArcCheckout as defineStableflowrCheckout };

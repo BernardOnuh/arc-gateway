@@ -1,4 +1,4 @@
-# ARC Gateway web app (marketing, dashboard, hosted checkout). Build from the repo root:
+# Stableflowr web app (marketing, dashboard, hosted checkout). Build from the repo root:
 #   docker build -f apps/web/Dockerfile --build-arg VITE_GATEWAY_URL=https://api.example.com -t arc-gateway-web .
 FROM node:22-alpine AS build
 RUN corepack enable
@@ -13,12 +13,12 @@ COPY apps/web/package.json apps/web/
 RUN pnpm install --frozen-lockfile --filter @arc/web...
 COPY packages ./packages
 COPY apps/web ./apps/web
-RUN pnpm --filter stableflow-sdk build && pnpm --filter @arc/widget build && pnpm --filter @arc/web build
+RUN pnpm --filter stableflowr-sdk build && pnpm --filter stableflowr-widget build && pnpm --filter @arc/web build
 
 FROM nginx:1.27-alpine
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
-# The standalone widget for partners' script tags: /widget/arc-widget.js
+# The standalone widget for partners' script tags: /widget/stableflowr.js
 COPY --from=build /app/packages/arc-widget/dist/standalone /usr/share/nginx/html/widget
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=5s CMD wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1

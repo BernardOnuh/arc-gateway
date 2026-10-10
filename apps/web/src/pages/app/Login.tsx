@@ -112,7 +112,7 @@ export function Login() {
         <p className="mt-4 text-center text-xs text-ink-600">Log out on shared computers.</p>
       </form>
       <p className="mt-6 text-center text-sm text-snow/90">
-        New to ARC Gateway?{" "}
+        New to Stableflowr?{" "}
         <Link to="/signup" className="font-semibold text-snow underline-offset-4 hover:underline">
           Create an account
         </Link>

@@ -1,4 +1,4 @@
-import { GatewayClient, GatewayError } from "stableflow-sdk";
+import { GatewayClient, GatewayError } from "stableflowr-sdk";
 import { GATEWAY_URL } from "./env";
 
 export function createGatewayClient(apiKey?: string): GatewayClient {

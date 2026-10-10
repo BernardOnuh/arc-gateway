@@ -43,13 +43,13 @@ const allIds = toc.flatMap((g) => g.items.map((i) => i.id));
 
 // ---------- snippets ----------
 
-const installSnippet = `npm install stableflow-sdk`;
+const installSnippet = `npm install stableflowr-sdk`;
 
-const clientSnippet = `import { GatewayClient } from "stableflow-sdk";
+const clientSnippet = `import { Stableflowr } from "stableflowr-sdk";
 
-export const gateway = new GatewayClient({
+export const gateway = new Stableflowr({
   baseUrl: "${GATEWAY_URL}",
-  apiKey: process.env.ARC_GATEWAY_KEY, // gw_live_… — server only
+  apiKey: process.env.STABLEFLOWR_SECRET_KEY, // gw_live_… — server only
 });`;
 
 const payoutSnippet = `await gateway.setPayoutAddress("0xYourArcAddress");`;
@@ -66,18 +66,18 @@ app.post("/api/checkout", async (req, res) => {
   res.json({ paymentId: payment.paymentId });
 });`;
 
-const linkSnippet = `import { checkoutUrl } from "stableflow-sdk";
+const linkSnippet = `import { checkoutUrl } from "stableflowr-sdk";
 
 const url = checkoutUrl({
   checkoutBaseUrl: "${SITE_URL || "https://your-site"}",
   paymentId: payment.paymentId,
-  publishableKey: process.env.ARC_PUBLISHABLE_KEY!, // pk_live_…
+  publishableKey: process.env.STABLEFLOWR_PUBLISHABLE_KEY!, // pk_live_…
 });
 res.redirect(url);`;
 
-const reactSnippet = `import { ArcCheckout } from "@arc/widget";
+const reactSnippet = `import { StableflowrCheckout } from "stableflowr-widget";
 
-<ArcCheckout
+<StableflowrCheckout
   publishableKey="pk_live_…"
   baseUrl="${GATEWAY_URL}"
   paymentId={paymentId}
@@ -86,31 +86,31 @@ const reactSnippet = `import { ArcCheckout } from "@arc/widget";
 
 const scriptSnippet = `<script type="module" src="${WIDGET_SCRIPT_URL}"></script>
 
-<arc-checkout
+<stableflowr-checkout
   publishable-key="pk_live_…"
   base-url="${GATEWAY_URL}"
   payment-id="PAYMENT_ID_FROM_YOUR_SERVER"
-></arc-checkout>
+></stableflowr-checkout>
 
 <script>
-  document.querySelector("arc-checkout").addEventListener("arc-paid", (e) => {
+  document.querySelector("stableflowr-checkout").addEventListener("stableflowr-paid", (e) => {
     location.assign("/thanks?order=" + e.detail.reference);
   });
 </script>`;
 
-const webhookCreateSnippet = `const endpoint = await gateway.createWebhook("https://shop.example.com/hooks/arc");
+const webhookCreateSnippet = `const endpoint = await gateway.createWebhook("https://shop.example.com/hooks/stableflowr");
 // endpoint.secret is whsec_… — store it now, it is shown only once.`;
 
 const webhookHandlerSnippet = `import express from "express";
-import { verifyWebhook } from "stableflow-sdk";
+import { verifyWebhook } from "stableflowr-sdk";
 
-app.post("/hooks/arc", express.raw({ type: "application/json" }), async (req, res) => {
+app.post("/hooks/stableflowr", express.raw({ type: "application/json" }), async (req, res) => {
   let event;
   try {
     event = await verifyWebhook(
       req.body.toString(),            // the RAW body, exactly as received
-      req.header("arc-signature"),
-      process.env.ARC_WEBHOOK_SECRET!,
+      req.header("stableflowr-signature"),
+      process.env.STABLEFLOWR_WEBHOOK_SECRET!,
     );
   } catch {
     return res.sendStatus(400);       // bad signature or stale timestamp
@@ -128,12 +128,12 @@ const pollSnippet = `const final = await gateway.waitForPayment(paymentId, {
 // final.status: "paid" | "expired" | "canceled"`;
 
 const curlCreateSnippet = `curl -X POST ${GATEWAY_URL}/v1/payments \\
-  -H "Authorization: Bearer $ARC_GATEWAY_KEY" \\
+  -H "Authorization: Bearer $STABLEFLOWR_SECRET_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{ "amount": "25.00", "description": "Pro plan", "reference": "order_1042" }'`;
 
 const curlGetSnippet = `curl ${GATEWAY_URL}/v1/payments/PAYMENT_ID \\
-  -H "Authorization: Bearer $ARC_GATEWAY_KEY"`;
+  -H "Authorization: Bearer $STABLEFLOWR_SECRET_KEY"`;
 
 const paymentJson = `{
   "paymentId": "50c66894-b772-4cc0-93e6-9f6864a1c130",
@@ -346,7 +346,7 @@ export function Docs() {
   const activeTitle = toc.flatMap((g) => g.items).find((i) => i.id === active)?.title;
 
   useEffect(() => {
-    document.title = "Docs · ARC Gateway";
+    document.title = "Docs · Stableflowr";
     // Opening a deep link (#webhooks) after the page renders.
     const id = window.location.hash.slice(1);
     if (id) document.getElementById(id)?.scrollIntoView();
@@ -360,7 +360,7 @@ export function Docs() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <a href={home} className="flex items-center gap-2.5 font-display text-[18px] font-semibold tracking-[-0.02em] text-ink-900">
             <LogoMark />
-            <span>ARC Gateway</span>
+            <span>Stableflowr</span>
             <span className="rounded-full bg-ink-900 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-white">Docs</span>
           </a>
           <div className="flex items-center gap-2">
@@ -417,14 +417,14 @@ export function Docs() {
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-brand-600">Documentation</p>
             <h1 className="mt-2 text-4xl leading-[1.05] sm:text-5xl">Accept any token. Get USDC on ARC.</h1>
             <p className="mt-4 text-lg leading-relaxed text-ink-600">
-              Everything you need to take payments with ARC Gateway: how it works, how to integrate it, and how to know
+              Everything you need to take payments with Stableflowr: how it works, how to integrate it, and how to know
               when you've been paid.
             </p>
           </div>
 
           <DocSection id="overview" title="Overview">
             <p>
-              ARC Gateway is a checkout. You charge a price in US dollars; your customer pays with tokens they already
+              Stableflowr is a checkout. You charge a price in US dollars; your customer pays with tokens they already
               hold (ETH, USDC, USDT or EURC on Ethereum or Base), split across as many as they like; and you receive{" "}
               <strong>USDC on the ARC network</strong> at an address you control.
             </p>
@@ -438,7 +438,7 @@ export function Docs() {
                 network details stay behind the scenes unless you choose to show them.
               </li>
               <li>
-                <strong>Built for developers.</strong> A REST API, a typed TypeScript SDK (<C>stableflow-sdk</C>), a
+                <strong>Built for developers.</strong> A REST API, a typed TypeScript SDK (<C>stableflowr-sdk</C>), a
                 hosted checkout page and an embeddable widget, plus signed webhooks.
               </li>
             </ul>
@@ -556,7 +556,7 @@ export function Docs() {
                 ["theme", "light, dark or auto. Overrides your saved branding."],
                 ["accent-color, radius, title", "Visual overrides."],
                 ["show-network-details", "Show ARC settlement details on the receipt."],
-                ["Events", <><C>arc-paid</C>, <C>arc-status</C> (detail = payment), <C>arc-error</C>.</>],
+                ["Events", <><C>stableflowr-paid</C>, <C>stableflowr-status</C> (detail = payment), <C>stableflowr-error</C>.</>],
               ]}
             />
             <Callout tone="warn">
@@ -608,9 +608,9 @@ export function Docs() {
             <p>Every delivery is a <C>POST</C> with a JSON body and these headers:</p>
             <Defs
               rows={[
-                ["arc-signature", <><C>t=TIMESTAMP,v1=HEX</C>: HMAC-SHA256 of <C>TIMESTAMP.RAW_BODY</C> with your <C>whsec_</C> secret.</>],
-                ["arc-event", "The event type."],
-                ["arc-delivery-id", "Unique per event. Use it to ignore duplicates."],
+                ["stableflowr-signature", <><C>t=TIMESTAMP,v1=HEX</C>: HMAC-SHA256 of <C>TIMESTAMP.RAW_BODY</C> with your <C>whsec_</C> secret.</>],
+                ["stableflowr-event", "The event type."],
+                ["stableflowr-delivery-id", "Unique per event. Use it to ignore duplicates."],
               ]}
             />
             <CodeBlock title="Body" code={webhookBodyJson} />
@@ -681,7 +681,7 @@ export function Docs() {
 
           <DocSection id="sdk" title="TypeScript SDK">
             <p>
-              <C>stableflow-sdk</C> works in Node 18+, Bun, Deno and browsers, as ESM or CommonJS, with full types and no
+              <C>stableflowr-sdk</C> works in Node 18+, Bun, Deno and browsers, as ESM or CommonJS, with full types and no
               runtime dependencies.
             </p>
             <CodeBlock title="Terminal" code={installSnippet} />

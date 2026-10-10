@@ -356,11 +356,11 @@ describe("branding", () => {
   });
 });
 
-describe("<arc-checkout>", () => {
+describe("<stableflowr-checkout>", () => {
   it("renders into a shadow root from attributes", async () => {
     setup();
     defineArcCheckout();
-    const el = document.createElement("arc-checkout");
+    const el = document.createElement("stableflowr-checkout");
     el.setAttribute("publishable-key", PK);
     el.setAttribute("base-url", "http://gw.test");
     el.setAttribute("payment-id", "p-1");

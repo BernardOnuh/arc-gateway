@@ -83,10 +83,10 @@ describe("webhooks", () => {
     expect(ping.json()).toMatchObject({ type: "ping", status: "succeeded", lastStatusCode: 200, attempts: 1 });
 
     const got = received[0];
-    const [, t, v1] = String(got.headers["arc-signature"]).match(/^t=(\d+),v1=([0-9a-f]{64})$/)!;
+    const [, t, v1] = String(got.headers["stableflowr-signature"]).match(/^t=(\d+),v1=([0-9a-f]{64})$/)!;
     expect(signPayload(hook.secret, got.body, Number(t))).toBe(`t=${t},v1=${v1}`);
-    expect(got.headers["arc-event"]).toBe("ping");
-    expect(JSON.parse(got.body)).toMatchObject({ type: "ping", data: { message: "Hello from ARC Gateway" } });
+    expect(got.headers["stableflowr-event"]).toBe("ping");
+    expect(JSON.parse(got.body)).toMatchObject({ type: "ping", data: { message: "Hello from Stableflowr" } });
 
     const events = await app.inject({ method: "GET", url: `/v1/webhooks/${hook.id}/events`, headers: as(secret) });
     expect(events.json().items[0]).toMatchObject({ type: "ping", status: "succeeded" });

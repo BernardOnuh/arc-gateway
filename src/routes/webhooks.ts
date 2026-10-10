@@ -79,7 +79,7 @@ export async function webhookRoutes(app: FastifyInstance) {
         ...common.schema,
         summary: "Add a webhook endpoint",
         description:
-          "Events: payment.processing, payment.paid, payment.partially_paid, payment.expired. Each POST carries Arc-Signature: t=<unix>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>, Arc-Event and Arc-Delivery-Id. Non-2xx responses are retried with backoff (8 attempts over ~2 days). Production requires https on a public host.",
+          "Events: payment.processing, payment.paid, payment.partially_paid, payment.expired. Each POST carries Stableflowr-Signature: t=<unix>,v1=<hex HMAC-SHA256(secret, \"<t>.<raw body>\")>, Stableflowr-Event and Stableflowr-Delivery-Id. Non-2xx responses are retried with backoff (8 attempts over ~2 days). Production requires https on a public host.",
         body: toJsonSchema(createSchema),
         response: { 201: anyObject, 400: err, 401: err, 403: err },
       },
@@ -131,7 +131,7 @@ export async function webhookRoutes(app: FastifyInstance) {
       if (!hook) return reply.code(404).send({ error: "webhook not found" });
       const [event] = await db
         .insert(webhookEvents)
-        .values({ webhookId: hook.id, type: "ping", payload: { type: "ping", created: new Date().toISOString(), data: { message: "Hello from ARC Gateway" } } })
+        .values({ webhookId: hook.id, type: "ping", payload: { type: "ping", created: new Date().toISOString(), data: { message: "Hello from Stableflowr" } } })
         .returning();
       return reply.send(eventView(await attemptDelivery(event)));
     }

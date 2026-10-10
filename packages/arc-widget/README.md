@@ -1,6 +1,6 @@
-# @arc/widget
+# stableflowr-widget
 
-Embeddable ARC Gateway swap form. Your customer picks a network, token and amount, and sees a live quote with your fee. Your **server** then submits it with your secret key. The widget tracks the intent until it settles on ARC.
+Embeddable Stableflowr swap form. Your customer picks a network, token and amount, and sees a live quote with your fee. Your **server** then submits it with your secret key. The widget tracks the intent until it settles on ARC.
 
 ## Security model
 
@@ -11,7 +11,7 @@ Embeddable ARC Gateway swap form. Your customer picks a network, token and amoun
 ## React
 
 ```tsx
-import { ArcSwapWidget } from "@arc/widget";
+import { ArcSwapWidget } from "stableflowr-widget";
 
 <ArcSwapWidget
   publishableKey="pk_live_…"
@@ -35,7 +35,7 @@ Props: `publishableKey`, `baseUrl`, `originChainId`, `destChainId`, `recipient`,
 
 ## Any website (web component)
 
-`pnpm --filter @arc/widget build` writes `dist/standalone/arc-widget.iife.js` (React bundled, about 50 kB gzipped). Serve it from your site:
+`pnpm --filter stableflowr-widget build` writes `dist/standalone/arc-widget.iife.js` (React bundled, about 50 kB gzipped). Serve it from your site:
 
 ```html
 <script src="/arc-widget.iife.js"></script>
@@ -49,12 +49,12 @@ Props: `publishableKey`, `baseUrl`, `originChainId`, `destChainId`, `recipient`,
 
 Attributes: `publishable-key`, `base-url`, `origin-chain-id`, `dest-chain-id`, `recipient`, `customer-id`, `slippage-bps`. Events (`detail` = payload): `arc-quote`, `arc-status`, `arc-intent`, `arc-error`. The widget renders in a shadow root, so page CSS doesn't leak in.
 
-In a bundler, `import { defineArcSwapWidget } from "@arc/widget/element"` registers the element with your app's React.
+In a bundler, `import { defineArcSwapWidget } from "stableflowr-widget/element"` registers the element with your app's React.
 
 ## Server side (submit)
 
 ```ts
-import { GatewayClient } from "stableflow-sdk";
+import { GatewayClient } from "stableflowr-sdk";
 const gateway = new GatewayClient({ baseUrl, apiKey: process.env.ARC_GATEWAY_KEY });
 
 app.post("/api/arc/submit", async (req, res) => {
@@ -69,6 +69,6 @@ Quotes created with the publishable key belong to your partner account, so your 
 ## Development
 
 ```
-pnpm --filter @arc/widget test
-pnpm --filter @arc/widget build
+pnpm --filter stableflowr-widget test
+pnpm --filter stableflowr-widget build
 ```

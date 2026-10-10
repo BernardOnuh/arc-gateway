@@ -19,7 +19,7 @@ export const API_REFERENCE_URL = `${GATEWAY_URL}/docs`;
 export const OPENAPI_URL = `${GATEWAY_URL}/openapi.json`;
 
 /** Hosted checkout script, served by the main site. */
-export const WIDGET_SCRIPT_URL = `${SITE_URL}/widget/arc-widget.js`;
+export const WIDGET_SCRIPT_URL = `${SITE_URL}/widget/stableflowr.js`;
 
 /** A path on the main site, absolute when we're on the docs host. */
 export function siteHref(path: string): string {

@@ -93,7 +93,7 @@ export function MarketingLayout() {
           <div>
             <Logo />
             <p className="mt-3 max-w-sm text-sm text-ink-600">
-              ARC Gateway: a cross-chain on-ramp to the ARC network for businesses.
+              Stableflowr: a cross-chain on-ramp to the ARC network for businesses.
             </p>
           </div>
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-ink-700">

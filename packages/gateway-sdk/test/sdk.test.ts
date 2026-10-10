@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CustomerClient, GatewayClient, GatewayError, checkoutUrl, verifyWebhook } from "../src/index.js";
+import { CustomerClient, GatewayClient, GatewayError, Stableflowr, checkoutUrl, verifyWebhook } from "../src/index.js";
 
 interface Call {
   url: string;
@@ -258,5 +258,13 @@ describe("checkoutUrl", () => {
     expect(checkoutUrl({ checkoutBaseUrl: "https://pay.example.com/", paymentId: "p-1", publishableKey: "pk_live_a+b" })).toBe(
       "https://pay.example.com/checkout/p-1?key=pk_live_a%2Bb"
     );
+  });
+});
+
+describe("Stableflowr", () => {
+  it("is the client class (GatewayClient is an alias)", () => {
+    const sf = new Stableflowr({ baseUrl: "https://api.example.com", apiKey: "gw_live_x" });
+    expect(sf).toBeInstanceOf(GatewayClient);
+    expect(Stableflowr).toBe(GatewayClient);
   });
 });

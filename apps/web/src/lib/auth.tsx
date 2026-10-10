@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { GatewayError, type DashboardCredentials, type GatewayClient, type PartnerProfile } from "stableflow-sdk";
+import { GatewayError, type DashboardCredentials, type GatewayClient, type PartnerProfile } from "stableflowr-sdk";
 import { sessionClient } from "./gateway";
 import { readStored, writeStored } from "./storage";
 

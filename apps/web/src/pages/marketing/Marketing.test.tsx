@@ -38,7 +38,7 @@ describe("marketing pages", () => {
 
   it("shows a real SDK snippet on developers", () => {
     renderApp("/developers");
-    expect(screen.getByText(/import \{ GatewayClient \} from "stableflow-sdk"/)).toBeInTheDocument();
+    expect(screen.getByText(/import \{ Stableflowr \} from "stableflowr-sdk"/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Interactive API reference/ })).toHaveAttribute("href", "http://localhost:3000/docs");
     expect(screen.getByRole("link", { name: /Documentation/ })).toHaveAttribute("href", "/docs");
   });

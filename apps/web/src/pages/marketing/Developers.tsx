@@ -6,12 +6,12 @@ import { IconArrowRight, IconBook, IconCode, IconShield, IconTile } from "../../
 import { API_REFERENCE_URL, DOCS_URL, GATEWAY_URL, OPENAPI_URL, SITE_URL, WIDGET_SCRIPT_URL } from "../../lib/env";
 import { DEFAULT_RATE_LIMIT_PER_MIN } from "../../lib/format";
 
-const createSnippet = `// npm install stableflow-sdk
-import { GatewayClient } from "stableflow-sdk";
+const createSnippet = `// npm install stableflowr-sdk
+import { Stableflowr } from "stableflowr-sdk";
 
-const gateway = new GatewayClient({
+const gateway = new Stableflowr({
   baseUrl: "${GATEWAY_URL}",
-  apiKey: process.env.ARC_GATEWAY_KEY, // gw_live_… — server only
+  apiKey: process.env.STABLEFLOWR_SECRET_KEY, // gw_live_… — server only
 });
 
 const payment = await gateway.createPayment({
@@ -20,37 +20,37 @@ const payment = await gateway.createPayment({
   reference: "order_1042",         // your order id
 });`;
 
-const checkoutSnippet = `import { checkoutUrl } from "stableflow-sdk";
+const checkoutSnippet = `import { checkoutUrl } from "stableflowr-sdk";
 
 // Option A: redirect to the hosted checkout
 res.redirect(checkoutUrl({
   checkoutBaseUrl: "${SITE_URL || "https://your-site"}",
   paymentId: payment.paymentId,
-  publishableKey: process.env.ARC_PUBLISHABLE_KEY!, // pk_live_…
+  publishableKey: process.env.STABLEFLOWR_PUBLISHABLE_KEY!, // pk_live_…
 }));`;
 
 const embedSnippet = `<!-- Option B: embed it in your page -->
 <script type="module" src="${WIDGET_SCRIPT_URL}"></script>
-<arc-checkout
+<stableflowr-checkout
   publishable-key="pk_live_…"
   base-url="${GATEWAY_URL}"
   payment-id="PAYMENT_ID"
-></arc-checkout>`;
+></stableflowr-checkout>`;
 
-const webhookSnippet = `import { verifyWebhook } from "stableflow-sdk";
+const webhookSnippet = `import { verifyWebhook } from "stableflowr-sdk";
 
-app.post("/hooks/arc", express.raw({ type: "application/json" }), async (req, res) => {
+app.post("/hooks/stableflowr", express.raw({ type: "application/json" }), async (req, res) => {
   const event = await verifyWebhook(
     req.body.toString(),
-    req.header("arc-signature"),
-    process.env.ARC_WEBHOOK_SECRET!,
+    req.header("stableflowr-signature"),
+    process.env.STABLEFLOWR_WEBHOOK_SECRET!,
   );
   if (event.type === "payment.paid") await fulfilOrder(event.data.reference);
   res.sendStatus(200);
 });`;
 
 const curlSnippet = `curl -X POST ${GATEWAY_URL}/v1/payments \\
-  -H "Authorization: Bearer $ARC_GATEWAY_KEY" \\
+  -H "Authorization: Bearer $STABLEFLOWR_SECRET_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{ "amount": "25.00", "reference": "order_1042" }'`;
 
@@ -96,7 +96,7 @@ export function Developers() {
     <>
       <PageHeader
         eyebrow="Developers"
-        title="Build with ARC Gateway"
+        title="Build with Stableflowr"
         intro="A REST API and a typed SDK. Charge in dollars, let customers pay with any token, and receive USDC on ARC."
       />
 

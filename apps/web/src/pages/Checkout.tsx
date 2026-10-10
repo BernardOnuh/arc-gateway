@@ -1,5 +1,5 @@
 import { useParams, useSearchParams } from "react-router-dom";
-import { ArcCheckout } from "@arc/widget";
+import { ArcCheckout } from "stableflowr-widget";
 import { SkyBackdrop } from "../components/art";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { GATEWAY_URL } from "../lib/env";

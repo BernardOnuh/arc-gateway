@@ -95,9 +95,9 @@ export async function buildApp() {
   await app.register(swagger, {
     openapi: {
       info: {
-        title: "arc-gateway",
+        title: "Stableflowr API",
         description:
-          "B2B gateway to the ARC network. Businesses self-serve via POST /v1/partners (api key shown once, partner fee charged on amountIn), register their end customers via POST /v1/customers, attribute transactions with customerId, and see revenue in GET /v1/ledger. Partners authenticate with a bearer API key, request cross-chain quotes (a partner fee is charged on amountIn), submit signed intents and poll intent status.\n\nSupported chains: Ethereum (1), Base (8453), Arc (5042), Arc Testnet (5042002) plus BNB (56) / Robinhood (4663) registry entries. Token contracts are real and verified on-chain. Pricing source is pluggable via QUOTE_PROVIDER: \"mock\" (simulated reference prices) or \"arc\" (live Circle Swap solver quotes via App Kit). With \"arc\", swap liquidity exists for Ethereum/Base -> Arc (USDC/EURC destinations).",
+          "Checkout payments in any token, settled as USDC on the ARC network. Create a payment for a USD amount with POST /v1/payments (secret key), send the customer to the hosted checkout or the widget (publishable key), and get a signed payment.paid webhook when it settles. Guides: https://docs.stableflowr.xyz\n\nCustomers pay from Ethereum (1) or Base (8453) with native ETH, USDC, USDT or EURC; you receive USDC on ARC (5042). Authenticate with Authorization: Bearer <key>. Errors are JSON { error: string }.",
         version: "1.0.0",
       },
       servers: [{ url: `http://localhost:${config.port}` }],

@@ -1,4 +1,4 @@
-# ARC Gateway API. Build from the repo root:  docker build -t arc-gateway-api .
+# Stableflowr API. Build from the repo root:  docker build -t arc-gateway-api .
 FROM node:22-alpine AS base
 RUN corepack enable
 WORKDIR /app

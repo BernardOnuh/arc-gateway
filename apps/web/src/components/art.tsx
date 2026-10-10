@@ -149,14 +149,14 @@ export function IconTile({ children, tone = "light" }: { children: ReactNode; to
   );
 }
 
-/** The ARC Gateway mark: a hexagon (the network) around an "A". Follows the theme. */
+/** The Stableflowr mark: a hexagon (the network) around a flowing "S". Follows the theme. */
 export function LogoMark({ size = 30, tone = "dark" }: { size?: number; tone?: "dark" | "light" }) {
   return (
     <svg aria-hidden width={size} height={size} viewBox="0 0 32 32">
       <rect width="32" height="32" rx="10" className={tone === "dark" ? "fill-ink-900" : "fill-snow"} />
       <path d="M16 6l8.7 5v10L16 26l-8.7-5V11z" fill="none" stroke="#8d99e4" strokeWidth="2.2" strokeLinejoin="round" />
       <path
-        d="M11.5 20L16 10.5 20.5 20M13.1 16.8h5.8"
+        d="M19.6 12.4c-.8-1.2-2.1-1.8-3.7-1.8-2 0-3.4 1-3.4 2.5 0 3.3 7.2 1.9 7.2 5.4 0 1.6-1.6 2.8-3.8 2.8-1.7 0-3.1-.7-3.9-1.9"
         fill="none"
         className={tone === "dark" ? "stroke-white" : "stroke-night"}
         strokeWidth="2.2"
@@ -437,7 +437,7 @@ export function ProductPreview({ className = "" }: { className?: string }) {
     >
       <div className="flex items-center gap-4 px-2 pb-4">
         <span className="flex w-40 shrink-0 items-center gap-2 text-sm font-bold">
-          <LogoMark size={22} /> ARC Gateway
+          <LogoMark size={22} /> Stableflowr
         </span>
         <span className="hidden flex-1 items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-xs text-ink-400 sm:flex md:max-w-xs">
           <IconSearch size={14} /> Search intents

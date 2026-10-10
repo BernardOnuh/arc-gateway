@@ -8,7 +8,7 @@ import type {
   ListQuotesParams,
   PageParams,
   TokenInfo,
-} from "stableflow-sdk";
+} from "stableflowr-sdk";
 import { useGateway } from "./auth";
 import { publicClient } from "./gateway";
 

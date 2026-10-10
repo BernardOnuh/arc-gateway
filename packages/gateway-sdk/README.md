@@ -1,6 +1,6 @@
-# stableflow-sdk
+# stableflowr-sdk
 
-TypeScript client for the Stableflow (ARC Gateway) API. Charge a price in dollars,
+TypeScript client for the Stableflowr API. Charge a price in dollars,
 and your customer pays with any mix of tokens from their own wallet (USDC, USDT,
 ETH on Ethereum or Base). It settles to you as USDC on ARC. The flow is
 non-custodial: funds go straight from the customer's wallet to your payout address.
@@ -9,17 +9,17 @@ non-custodial: funds go straight from the customer's wallet to your payout addre
 - ESM and CommonJS, fully typed, no runtime dependencies
 
 ```sh
-npm install stableflow-sdk
+npm install stableflowr-sdk
 ```
 
 ## Quickstart
 
 ```ts
-import { GatewayClient, checkoutUrl } from "stableflow-sdk";
+import { Stableflowr, checkoutUrl } from "stableflowr-sdk";
 
-const gateway = new GatewayClient({
+const gateway = new Stableflowr({
   baseUrl: "https://api.your-gateway.com", // your gateway's API URL
-  apiKey: process.env.STABLEFLOW_SECRET_KEY, // gw_live_… (server only)
+  apiKey: process.env.STABLEFLOWR_SECRET_KEY, // gw_live_… (server only)
 });
 
 // One-time setup: where your USDC lands on ARC.
@@ -35,7 +35,7 @@ const payment = await gateway.createPayment({
 const url = checkoutUrl({
   checkoutBaseUrl: "https://pay.your-gateway.com", // the hosted checkout's site
   paymentId: payment.paymentId,
-  publishableKey: process.env.STABLEFLOW_PUBLISHABLE_KEY!, // pk_live_…
+  publishableKey: process.env.STABLEFLOWR_PUBLISHABLE_KEY!, // pk_live_…
 });
 // redirect the customer to `url`
 ```
@@ -58,11 +58,11 @@ const endpoint = await gateway.createWebhook("https://shop.example.com/hooks/sta
 
 ```ts
 import express from "express";
-import { verifyWebhook } from "stableflow-sdk";
+import { verifyWebhook } from "stableflowr-sdk";
 
 app.post("/hooks/stableflow", express.raw({ type: "application/json" }), async (req, res) => {
   try {
-    const event = await verifyWebhook(req.body.toString(), req.header("arc-signature"), process.env.STABLEFLOW_WEBHOOK_SECRET!);
+    const event = await verifyWebhook(req.body.toString(), req.header("stableflowr-signature"), process.env.STABLEFLOWR_WEBHOOK_SECRET!);
     if (event.type === "payment.paid") await fulfil(event.data.reference as string);
     res.sendStatus(200);
   } catch {
@@ -106,7 +106,7 @@ was paid, `refundOwedCents` and `refunds` tell you whom to refund.
 Every non-2xx response throws a `GatewayError`:
 
 ```ts
-import { GatewayError } from "stableflow-sdk";
+import { GatewayError } from "stableflowr-sdk";
 
 try {
   await gateway.createPayment({ amount: "0.10" });

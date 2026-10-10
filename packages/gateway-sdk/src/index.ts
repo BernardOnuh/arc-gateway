@@ -1,7 +1,8 @@
 export { GatewayError } from "./errors.js";
 export { verifyWebhook } from "./webhooks.js";
 export type { WebhookEvent } from "./webhooks.js";
-export { GatewayClient, checkoutUrl } from "./client.js";
+// Stableflowr is the client; GatewayClient is the same class under its original name.
+export { GatewayClient as Stableflowr, GatewayClient, checkoutUrl } from "./client.js";
 export type { GatewayClientOptions, PaymentPollOptions, PollOptions } from "./client.js";
 export { CustomerClient } from "./customer.js";
 export type { CustomerClientOptions } from "./customer.js";

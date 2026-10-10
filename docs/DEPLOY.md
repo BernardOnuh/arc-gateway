@@ -1,4 +1,4 @@
-# Deploying ARC Gateway
+# Deploying Stableflowr
 
 Two containers plus Postgres and Redis:
 

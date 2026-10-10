@@ -1,5 +1,5 @@
 export { ArcSwapWidget, WidgetApiError, accentForeground, normalizeAccent } from "./ArcSwapWidget.js";
-export { ArcCheckout, DEFAULT_CHECKOUT_TEXTS } from "./checkout/ArcCheckout.js";
+export { ArcCheckout, ArcCheckout as StableflowrCheckout, DEFAULT_CHECKOUT_TEXTS } from "./checkout/ArcCheckout.js";
 export { appKitExecute } from "./checkout/execute.js";
 export type {
   ArcCheckoutProps,
@@ -15,7 +15,7 @@ export type {
   PaymentStatus,
   PriceItem,
 } from "./checkout/types.js";
-// The custom element lives at "@arc/widget/element" so importing the React
+// The custom element lives at "stableflowr-widget/element" so importing the React
 // component never touches HTMLElement (safe for SSR).
 export { formatUnits, parseUnits } from "./units.js";
 export { TERMINAL_STATUSES } from "./types.js";

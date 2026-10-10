@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { GatewayError } from "stableflow-sdk";
+import { GatewayError } from "stableflowr-sdk";
 import { glassCardClass } from "../../components/AuthShell";
 import { IconCheck, IconKey, IconShield, SkyBackdrop } from "../../components/art";
 import { buttonClass, inputClass } from "../../components/dashboard/ui";

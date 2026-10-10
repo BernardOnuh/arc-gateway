@@ -99,9 +99,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@arc/widget':
-        specifier: workspace:*
-        version: link:../../packages/arc-widget
       '@fontsource-variable/geist':
         specifier: ^5.3.0
         version: 5.3.0
@@ -120,9 +117,12 @@ importers:
       react-router-dom:
         specifier: 6.30.6
         version: 6.30.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      stableflow-sdk:
+      stableflowr-sdk:
         specifier: workspace:*
         version: link:../../packages/gateway-sdk
+      stableflowr-widget:
+        specifier: workspace:*
+        version: link:../../packages/arc-widget
     devDependencies:
       '@testing-library/dom':
         specifier: 10.4.1

@@ -1,18 +1,18 @@
 # @arc/web
 
-ARC Gateway in one Vite app:
+Stableflowr in one Vite app:
 
 - Marketing site: `/`, `/how-it-works`, `/developers`, `/pricing`, `/signup` (one-time key reveal).
 - Partner dashboard `/app/*` (lazy-loaded): overview, customers (+ setup links), transactions, ledger (+ CSV), widget (embed code + live preview), settings (key rotation, publishable keys).
 - Customer accounts `/account/*` (lazy-loaded): `/account/setup?token=…`, `/account/login?partner=…`, `/account` (payout wallet, password).
 
-Stack: React 18, Vite 8, Tailwind 3, TanStack Query 5, React Router 6, `stableflow-sdk` and `@arc/widget` (workspace).
+Stack: React 18, Vite 8, Tailwind 3, TanStack Query 5, React Router 6, `stableflowr-sdk` and `stableflowr-widget` (workspace).
 
 ## Run
 
 ```bash
 pnpm install
-pnpm --filter stableflow-sdk --filter @arc/widget build   # the app imports their dist/
+pnpm --filter stableflowr-sdk --filter stableflowr-widget build   # the app imports their dist/
 cp apps/web/.env.example apps/web/.env    # optional; defaults to http://localhost:3000
 pnpm --filter @arc/web dev                # http://localhost:5173
 ```

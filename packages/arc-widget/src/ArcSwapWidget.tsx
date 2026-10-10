@@ -504,7 +504,7 @@ export function ArcSwapWidget(props: ArcSwapWidgetProps) {
       </div>
       {body}
       <p className="arcw-foot">
-        Secured by <b>ARC Gateway</b>
+        Secured by <b>Stableflowr</b>
       </p>
     </div>
   );
