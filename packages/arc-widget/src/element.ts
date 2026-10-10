@@ -3,10 +3,23 @@ import { createRoot, type Root } from "react-dom/client";
 import { ArcSwapWidget } from "./ArcSwapWidget.js";
 import type { ArcSwapWidgetProps, WidgetQuote } from "./types.js";
 
-const ATTRS = ["publishable-key", "base-url", "origin-chain-id", "dest-chain-id", "recipient", "customer-id", "slippage-bps"] as const;
+const ATTRS = [
+  "publishable-key",
+  "base-url",
+  "origin-chain-id",
+  "dest-chain-id",
+  "recipient",
+  "customer-id",
+  "slippage-bps",
+  "theme",
+  "accent-color",
+  "radius",
+  "title",
+] as const;
 
 /**
- * <arc-swap-widget publishable-key="pk_live_…" base-url="https://gateway…">
+ * <arc-swap-widget publishable-key="pk_live_…" base-url="https://gateway…"
+ *   theme="auto" accent-color="#4f46e5" radius="16" title="Top up">
  *
  * Set `element.submitIntent = async (quote) => ({ intentId })` to enable
  * submission (call your server, which submits with your secret key).
@@ -64,6 +77,10 @@ export class ArcSwapWidgetElement extends HTMLElement {
       recipient: this.getAttribute("recipient") ?? undefined,
       customerId: this.getAttribute("customer-id") ?? undefined,
       slippageBps: this.num("slippage-bps"),
+      theme: (["light", "dark", "auto"] as const).find((t) => t === this.getAttribute("theme")),
+      accentColor: this.getAttribute("accent-color") ?? undefined,
+      radius: this.num("radius"),
+      title: this.getAttribute("title") ?? undefined,
       submitIntent: this._submitIntent,
       onQuote: (q) => this.emit("arc-quote", q),
       onStatus: (i) => this.emit("arc-status", i),

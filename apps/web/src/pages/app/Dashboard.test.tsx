@@ -354,9 +354,18 @@ describe("widget page", () => {
     };
     signedIn({ "GET /v1/partners/me/api-keys": () => ({ status: 200, body: { items: [secretKeyRow, pkRow] } }) });
     renderApp("/app/widget");
+    const user = userEvent.setup();
     expect((await screen.findAllByText(/publishableKey="pk_live_widgetwdgt"/)).length).toBeGreaterThan(0);
-    expect(screen.getByText(/publishable-key="pk_live_widgetwdgt"/)).toBeInTheDocument();
     expect(await screen.findByTestId("arc-swap-widget")).toBeInTheDocument();
     expect(await screen.findByLabelText("From network")).toBeInTheDocument();
+
+    // Appearance choices restyle the preview and flow into the snippets.
+    await user.click(screen.getByRole("radio", { name: "dark" }));
+    await user.click(screen.getByRole("radio", { name: "Indigo" }));
+    expect(screen.getByTestId("arc-swap-widget")).toHaveAttribute("data-theme", "dark");
+    expect(screen.getByText(/accentColor="#4f46e5"/)).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "Script tag" }));
+    expect(screen.getByText(/publishable-key="pk_live_widgetwdgt"/)).toHaveTextContent('accent-color="#4f46e5"');
+    expect(screen.getByText(/publishable-key="pk_live_widgetwdgt"/)).toHaveTextContent('theme="dark"');
   });
 });

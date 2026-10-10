@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ArcSwapWidget } from "../src/index.js";
+import { ArcSwapWidget, accentForeground, normalizeAccent } from "../src/index.js";
 import { defineArcSwapWidget } from "../src/element.js";
 import { formatUnits, parseUnits } from "../src/units.js";
 
@@ -199,6 +199,43 @@ describe("ArcSwapWidget", () => {
   });
 });
 
+describe("appearance", () => {
+  it("applies theme, accent and radius, and refuses anything that isn't a hex color", async () => {
+    gateway();
+    const { rerender } = render(
+      <ArcSwapWidget publishableKey={PK} baseUrl="http://gw.test" theme="dark" accentColor="#4F46E5" radius={8} title="Top up" />
+    );
+    const root = screen.getByTestId("arc-swap-widget");
+    expect(root).toHaveAttribute("data-theme", "dark");
+    expect(root.style.getPropertyValue("--arcw-accent")).toBe("#4f46e5");
+    expect(root.style.getPropertyValue("--arcw-accent-fg")).toBe("#ffffff");
+    expect(root.style.getPropertyValue("--arcw-r")).toBe("8px");
+    expect(screen.getByRole("heading", { name: "Top up" })).toBeInTheDocument();
+
+    rerender(<ArcSwapWidget publishableKey={PK} baseUrl="http://gw.test" accentColor="red;background:url(x)" radius={99} />);
+    expect(root.style.getPropertyValue("--arcw-accent")).toBe("#1c1f3f");
+    expect(root.style.getPropertyValue("--arcw-r")).toBe("32px");
+    expect(root).toHaveAttribute("data-theme", "light");
+  });
+
+  it("picks readable button text for light and dark accents", () => {
+    expect(normalizeAccent("#fc0")).toBe("#ffcc00");
+    expect(accentForeground("#ffcc00")).toBe("#12142b");
+    expect(accentForeground("#1c1f3f")).toBe("#ffffff");
+  });
+
+  it("offers a refresh once the quote expires", async () => {
+    const user = userEvent.setup();
+    const fetchMock = gateway(undefined, 200, { ...quote, expiresAt: Math.floor(Date.now() / 1000) - 1 });
+    render(<ArcSwapWidget publishableKey={PK} baseUrl="http://gw.test" recipient={RECIPIENT} submitIntent={async () => ({ intentId: "i-1" })} />);
+    await fillAndQuote(user);
+    expect(await screen.findByText("Quote expired")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirm" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Refresh quote/ }));
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([u]) => String(u).endsWith("/v1/quotes"))).toHaveLength(2));
+  });
+});
+
 describe("<arc-swap-widget>", () => {
   it("renders into a shadow root and emits DOM events", async () => {
     gateway();
@@ -208,9 +245,14 @@ describe("<arc-swap-widget>", () => {
     el.setAttribute("publishable-key", PK);
     el.setAttribute("base-url", "http://gw.test");
     el.setAttribute("dest-chain-id", "5042002");
+    el.setAttribute("theme", "auto");
+    el.setAttribute("accent-color", "#0ea5e9");
     document.body.appendChild(el);
     await waitFor(() => expect(el.shadowRoot?.querySelector("#arcw-dest")).not.toBeNull());
     expect((el.shadowRoot!.querySelector("#arcw-dest") as HTMLSelectElement).value).toBe("5042002");
+    const root = el.shadowRoot!.querySelector(".arcw") as HTMLElement;
+    expect(root.dataset.theme).toBe("auto");
+    expect(root.style.getPropertyValue("--arcw-accent")).toBe("#0ea5e9");
     el.remove();
   });
 });

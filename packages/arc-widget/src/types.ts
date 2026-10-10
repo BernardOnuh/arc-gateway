@@ -66,7 +66,20 @@ export interface Intent {
   updatedAt: string;
 }
 
-export interface ArcSwapWidgetProps {
+export type WidgetTheme = "light" | "dark" | "auto";
+
+export interface WidgetAppearance {
+  /** "auto" follows the visitor's OS setting. Default "light". */
+  theme?: WidgetTheme;
+  /** Brand color for the main button and highlights, as #rgb or #rrggbb. Default #1c1f3f. */
+  accentColor?: string;
+  /** Corner radius of the card in px (0-32). Inner elements scale with it. Default 20. */
+  radius?: number;
+  /** Heading at the top of the card. Default "Send to ARC". */
+  title?: string;
+}
+
+export interface ArcSwapWidgetProps extends WidgetAppearance {
   /** pk_live_… key from your dashboard. Its allowed origins must include this page's origin. */
   publishableKey: string;
   /** Gateway URL. Default http://localhost:3000. */
